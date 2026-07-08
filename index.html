@@ -164,6 +164,59 @@
       background: rgba(255, 215, 215, 0.9);
     }
 
+	.scanner-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(20, 20, 25, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  padding: 18px;
+}
+
+.scanner-modal.hidden {
+  display: none;
+}
+
+.scanner-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  margin-bottom: 12px;
+}
+
+.scanner-modal-header h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.scanner-modal-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.scanner-modal video,
+#html5Reader {
+  width: 100%;
+  min-height: 320px;
+  max-height: 70vh;
+  border-radius: 24px;
+  overflow: hidden;
+  background: #111;
+}
+
+.scanner-modal .scanner-status {
+  color: white;
+  text-align: center;
+  margin-top: 14px;
+  font-size: 1rem;
+}
+
 	.scanner-box {
   margin-top: 14px;
   border-radius: 24px;
@@ -386,15 +439,17 @@
   <button id="clearBtn">Clear form</button>
 </div>
 
-<div id="scannerBox" class="scanner-box hidden">
-  <video id="scannerVideo" autoplay playsinline></video>
-<div id="html5Reader" class="hidden"></div>
-
-  <div class="scanner-actions">
-    <button id="stopScanBtn" class="danger-btn">Stop scanning</button>
+<div id="scannerBox" class="scanner-modal hidden">
+  <div class="scanner-modal-header">
+    <h2>Scan barcode</h2>
+    <button id="stopScanBtn" class="danger-btn">Close</button>
   </div>
 
-  <p id="scannerStatus" class="scanner-status">Point camera at barcode.</p>
+  <div class="scanner-modal-body">
+    <video id="scannerVideo" autoplay playsinline></video>
+    <div id="html5Reader" class="hidden"></div>
+    <p id="scannerStatus" class="scanner-status">Point camera at barcode.</p>
+  </div>
 </div>
       </div>
 
@@ -551,30 +606,38 @@
 
   const cleaned = value.trim();
 
-  // Already full date: 2027-09-01
+  // Full ISO date: 2027-09-29
   if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) {
     return cleaned;
   }
 
-  // Format: 09/2027 or 09-2027
-  let match = cleaned.match(/^(\d{1,2})[\/\-](\d{4})$/);
+  // Full NZ date: 29/09/2027 or 29-09-2027
+  let match = cleaned.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (match) {
+    const day = match[1].padStart(2, "0");
+    const month = match[2].padStart(2, "0");
+    const year = match[3];
+
+    return `${year}-${month}-${day}`;
+  }
+
+  // Month/year: 09/2027 or 09-2027
+  match = cleaned.match(/^(\d{1,2})[\/\-](\d{4})$/);
   if (match) {
     const month = match[1].padStart(2, "0");
     const year = match[2];
 
-    // Use last day of the month for expiry
     const lastDay = new Date(Number(year), Number(month), 0).getDate();
 
     return `${year}-${month}-${String(lastDay).padStart(2, "0")}`;
   }
 
-  // Format: 2027/09 or 2027-09
+  // Year/month: 2027/09 or 2027-09
   match = cleaned.match(/^(\d{4})[\/\-](\d{1,2})$/);
   if (match) {
     const year = match[1];
     const month = match[2].padStart(2, "0");
 
-    // Use last day of the month for expiry
     const lastDay = new Date(Number(year), Number(month), 0).getDate();
 
     return `${year}-${month}-${String(lastDay).padStart(2, "0")}`;
@@ -696,7 +759,10 @@
         <span class="status-pill ${status.className}">${status.label}</span>
         <div class="button-row" style="margin-top: 10px;">
           <button data-edit="${item.id}">Edit</button>
-          <button class="danger-btn" data-delete="${item.id}">Delete</button>
+          ${status.group === "expired"
+  ? `<button class="danger-btn" data-dispose="${item.id}">Disposed</button>`
+  : `<button class="danger-btn" data-delete="${item.id}">Delete</button>`
+}
         </div>
       </div>
     `;
@@ -726,15 +792,26 @@
   });
 
   document.querySelectorAll("[data-delete]").forEach(button => {
-    button.addEventListener("click", async () => {
-      const id = button.dataset.delete;
-      const confirmed = confirm("Delete this item?");
+  button.addEventListener("click", async () => {
+    const id = button.dataset.delete;
+    const confirmed = confirm("Delete this item?");
 
-      if (!confirmed) return;
+    if (!confirmed) return;
 
-      await deleteDoc(doc(db, "expiryItems", id));
-    });
+    await deleteDoc(doc(db, "expiryItems", id));
   });
+});
+
+document.querySelectorAll("[data-dispose]").forEach(button => {
+  button.addEventListener("click", async () => {
+    const id = button.dataset.dispose;
+    const confirmed = confirm("Mark this expired item as disposed and remove it from the tracker?");
+
+    if (!confirmed) return;
+
+    await deleteDoc(doc(db, "expiryItems", id));
+  });
+});
 }
 
 	function renderActiveSummaryFilter() {
@@ -776,13 +853,26 @@
 
   itemNameInput.value = existingItem.itemName || "";
   sectionSelect.value = existingItem.section || "Triage room";
-  quantityInput.value = existingItem.quantity || 1;
+  quantityInput.value = 1;
   notesInput.value = existingItem.notes || "";
 
-  // Do not copy expiry because same barcode can have a different batch expiry.
-  expiryDateInput.value = "";
+  const lastExpiry = existingItem.expiryText || formatDate(existingItem.expiryDate);
 
-  scannerStatus.textContent = `Existing barcode found. Last expiry recorded: ${existingItem.expiryText || formatDate(existingItem.expiryDate)}. Please confirm current pack expiry.`;
+  const sameExpiry = confirm(
+    `Existing item found:\n\n${existingItem.itemName}\nLast expiry recorded: ${lastExpiry}\n\nIs this the same expiry?`
+  );
+
+  if (sameExpiry) {
+    expiryDateInput.value = existingItem.expiryText || existingItem.expiryDate || "";
+    editingId = null;
+
+    scannerStatus.textContent = "Same expiry selected. Saving will add quantity to the existing batch.";
+    scannerStatus.classList.remove("hidden");
+    return;
+  }
+
+  expiryDateInput.value = "";
+  scannerStatus.textContent = "Same barcode, new expiry. Please enter the current expiry.";
   scannerStatus.classList.remove("hidden");
 }
 
@@ -886,14 +976,18 @@ async function scanLoop() {
     const barcodes = await barcodeDetector.detect(scannerVideo);
 
     if (barcodes.length > 0) {
-      const barcodeValue = barcodes[0].rawValue;
+  const barcodeValue = barcodes[0].rawValue;
 
-      barcodeInput.value = barcodeValue;
-      autofillFromBarcode(barcodeValue);
+  scanning = false;
 
-      stopScanner();
-      return;
-    }
+  barcodeInput.value = barcodeValue;
+  autofillFromBarcode(barcodeValue);
+
+  scannerStatus.textContent = `Barcode detected: ${barcodeValue}. Complete item details, then save.`;
+
+  stopScanner();
+  return;
+}
   } catch (error) {
     console.error(error);
   }
@@ -936,46 +1030,73 @@ async function stopScanner() {
     }
 
     async function saveItem() {
-      const itemName = itemNameInput.value.trim();
-      const barcode = barcodeInput.value.trim();
-      const expiryText = expiryDateInput.value.trim();
-	const expiryDate = normaliseExpiryDate(expiryText);
-      const section = sectionSelect.value;
-      const quantity = Number(quantityInput.value || 1);
-      const notes = notesInput.value.trim();
+  const itemName = itemNameInput.value.trim();
+  const barcode = barcodeInput.value.trim();
+  const expiryText = expiryDateInput.value.trim();
+  const expiryDate = normaliseExpiryDate(expiryText);
+  const section = sectionSelect.value;
+  const quantity = Number(quantityInput.value || 1);
+  const notes = notesInput.value.trim();
 
-      if (!itemName || !expiryText || !section) {
-  alert("Please add item name, expiry date, and section.");
-  return;
+  if (!itemName || !expiryText || !section) {
+    alert("Please add item name, expiry date, and section.");
+    return;
+  }
+
+  if (!expiryDate) {
+    alert("Please use expiry format like 09/2027, 29/09/2027, 2027/09, or 2027-09.");
+    return;
+  }
+
+  const matchingSameBatch = stockItems.find(item =>
+    item.barcode === barcode &&
+    item.expiryDate === expiryDate &&
+    item.section === section &&
+    item.id !== editingId
+  );
+
+  // If same barcode + same expiry + same section exists, add quantity instead of duplicating.
+  if (matchingSameBatch && !editingId) {
+    const newQuantity = Number(matchingSameBatch.quantity || 1) + quantity;
+
+    await updateDoc(doc(db, "expiryItems", matchingSameBatch.id), {
+      quantity: newQuantity,
+      itemName,
+      barcode,
+      expiryDate,
+      expiryText,
+      section,
+      notes,
+      updatedAt: serverTimestamp()
+    });
+
+    clearForm();
+    alert("Same item and same expiry found. Quantity updated.");
+    return;
+  }
+
+  const data = {
+    itemName,
+    barcode,
+    expiryDate,
+    expiryText,
+    section,
+    quantity,
+    notes,
+    updatedAt: serverTimestamp()
+  };
+
+  if (editingId) {
+    await updateDoc(doc(db, "expiryItems", editingId), data);
+  } else {
+    await addDoc(collection(db, "expiryItems"), {
+      ...data,
+      createdAt: serverTimestamp()
+    });
+  }
+
+  clearForm();
 }
-
-if (!expiryDate) {
-  alert("Please use expiry format like 09/2027, 2027/09, or 2027-09.");
-  return;
-}
-
-      const data = {
-        itemName,
-        barcode,
-        expiryDate,
-		expiryText,
-		section,
-        quantity,
-        notes,
-        updatedAt: serverTimestamp()
-      };
-
-      if (editingId) {
-        await updateDoc(doc(db, "expiryItems", editingId), data);
-      } else {
-        await addDoc(collection(db, "expiryItems"), {
-          ...data,
-          createdAt: serverTimestamp()
-        });
-      }
-
-      clearForm();
-    }
 
     function loadItems() {
       const q = query(collection(db, "expiryItems"), orderBy("expiryDate", "asc"));
