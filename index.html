@@ -753,6 +753,7 @@
 
   if (!existingItem) {
     scannerStatus.textContent = "New barcode detected. Please add item details and expiry.";
+    scannerStatus.classList.remove("hidden");
     return;
   }
 
@@ -761,48 +762,11 @@
   quantityInput.value = existingItem.quantity || 1;
   notesInput.value = existingItem.notes || "";
 
-  // Safer: do NOT auto-fill expiry because same barcode can have different stock expiry.
+  // Do not copy expiry because same barcode can have a different batch expiry.
   expiryDateInput.value = "";
 
-  scannerStatus.textContent = `Existing barcode found. Last expiry recorded: ${formatDate(existingItem.expiryDate)}. Please confirm current pack expiry.`;
-}
-
-	async function startScanner() {
-  if (!("BarcodeDetector" in window)) {
-    alert("Barcode scanning is not supported on this browser. You can still type the barcode manually.");
-    return;
-  }
-
-  try {
-    barcodeDetector = new BarcodeDetector({
-      formats: [
-        "code_128",
-        "code_39",
-        "ean_13",
-        "ean_8",
-        "upc_a",
-        "upc_e",
-        "qr_code"
-      ]
-    });
-
-    scannerStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "environment"
-      }
-    });
-
-    scannerVideo.srcObject = scannerStream;
-    scannerBox.classList.remove("hidden");
-    scannerStatus.textContent = "Point camera at barcode.";
-    scanning = true;
-
-    scanLoop();
-  } catch (error) {
-    console.error(error);
-    alert("Camera could not start. Check browser camera permission.");
-    stopScanner();
-  }
+  scannerStatus.textContent = `Existing barcode found. Last expiry recorded: ${existingItem.expiryText || formatDate(existingItem.expiryDate)}. Please confirm current pack expiry.`;
+  scannerStatus.classList.remove("hidden");
 }
 
 async function scanLoop() {
