@@ -190,6 +190,17 @@
   color: #6d6875;
   font-size: 0.9rem;
 }
+
+#html5Reader {
+  width: 100%;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #111;
+}
+
+#html5Reader video {
+  border-radius: 20px;
+}
 	
     .section-tabs {
       display: flex;
@@ -377,6 +388,7 @@
 
 <div id="scannerBox" class="scanner-box hidden">
   <video id="scannerVideo" autoplay playsinline></video>
+<div id="html5Reader" class="hidden"></div>
 
   <div class="scanner-actions">
     <button id="stopScanBtn" class="danger-btn">Stop scanning</button>
@@ -394,7 +406,9 @@
       </div>
     </div>
   </div>
-
+	
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+	
   <script type="module">
     // Replace this Firebase config with the same config from your existing website.
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
@@ -483,12 +497,14 @@
 	const scanBtn = document.getElementById("scanBtn");
 	const scannerBox = document.getElementById("scannerBox");
 	const scannerVideo = document.getElementById("scannerVideo");
+	const html5Reader = document.getElementById("html5Reader");
 	const stopScanBtn = document.getElementById("stopScanBtn");
 	const scannerStatus = document.getElementById("scannerStatus");
 
 	let scannerStream = null;
 	let barcodeDetector = null;
 	let scanning = false;
+	let html5QrCode = null;
 
     const expiredCount = document.getElementById("expiredCount");
     const soonCount = document.getElementById("soonCount");
@@ -771,12 +787,19 @@
 }
 
 async function startScanner() {
+  scannerBox.classList.remove("hidden");
+  scannerStatus.textContent = "Starting camera...";
+
+  // iPhone/Safari fallback
   if (!("BarcodeDetector" in window)) {
-    alert("Barcode scanning is not supported on this browser. You can still type the barcode manually.");
+    startHtml5Scanner();
     return;
   }
 
   try {
+    scannerVideo.classList.remove("hidden");
+    html5Reader.classList.add("hidden");
+
     barcodeDetector = new BarcodeDetector({
       formats: [
         "code_128",
@@ -796,16 +819,64 @@ async function startScanner() {
     });
 
     scannerVideo.srcObject = scannerStream;
-    scannerBox.classList.remove("hidden");
     scannerStatus.textContent = "Point camera at barcode.";
     scanning = true;
 
     scanLoop();
   } catch (error) {
     console.error(error);
-    alert("Camera could not start. Check browser camera permission.");
-    stopScanner();
+    scannerStatus.textContent = "Native scanner failed. Trying iPhone fallback scanner...";
+    startHtml5Scanner();
   }
+}
+
+function startHtml5Scanner() {
+  scannerVideo.classList.add("hidden");
+  html5Reader.classList.remove("hidden");
+
+  if (typeof Html5Qrcode === "undefined") {
+    alert("Fallback scanner could not load. Please type the barcode manually.");
+    stopScanner();
+    return;
+  }
+
+  html5QrCode = new Html5Qrcode("html5Reader");
+
+  const config = {
+    fps: 10,
+    qrbox: {
+      width: 260,
+      height: 140
+    },
+    formatsToSupport: [
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.CODE_128,
+      Html5QrcodeSupportedFormats.CODE_39,
+      Html5QrcodeSupportedFormats.UPC_A,
+      Html5QrcodeSupportedFormats.UPC_E,
+      Html5QrcodeSupportedFormats.QR_CODE
+    ]
+  };
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    decodedText => {
+      barcodeInput.value = decodedText;
+      autofillFromBarcode(decodedText);
+
+      scannerStatus.textContent = `Barcode detected: ${decodedText}`;
+      stopScanner();
+    },
+    errorMessage => {
+      // Ignore scan errors while camera is searching.
+    }
+  ).catch(error => {
+    console.error(error);
+    alert("Camera could not start. Please allow camera access or type the barcode manually.");
+    stopScanner();
+  });
 }
 
 async function scanLoop() {
@@ -830,7 +901,7 @@ async function scanLoop() {
   requestAnimationFrame(scanLoop);
 }
 
-function stopScanner() {
+async function stopScanner() {
   scanning = false;
 
   if (scannerStream) {
@@ -838,8 +909,21 @@ function stopScanner() {
     scannerStream = null;
   }
 
+  if (html5QrCode) {
+    try {
+      await html5QrCode.stop();
+      await html5QrCode.clear();
+    } catch (error) {
+      console.warn("Fallback scanner already stopped.", error);
+    }
+
+    html5QrCode = null;
+  }
+
   scannerVideo.srcObject = null;
   scannerBox.classList.add("hidden");
+  html5Reader.classList.add("hidden");
+  scannerVideo.classList.remove("hidden");
 }
 
     function escapeHtml(value) {
