@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Expiry Tracker</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Tahoma, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.9), transparent 32%),
+        linear-gradient(135deg, #efedf5, #f9f7fb);
+      color: #2f2d35;
+      padding: 18px;
+    }
+
+    .app {
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 5vw, 3rem);
+      letter-spacing: -0.04em;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: #6d6875;
+      font-size: 0.95rem;
+    }
+
+    .glass-card {
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(255,255,255,0.75);
+      box-shadow: 0 18px 45px rgba(74, 67, 92, 0.12);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border-radius: 28px;
+      padding: 18px;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .summary-box {
+      border-radius: 22px;
+      padding: 16px;
+      background: rgba(255,255,255,0.6);
+      border: 1px solid rgba(255,255,255,0.7);
+    }
+
+    .summary-box strong {
+      display: block;
+      font-size: 1.7rem;
+      margin-bottom: 4px;
+    }
+
+    .summary-box span {
+      color: #6d6875;
+      font-size: 0.9rem;
+    }
+
+    .expired strong {
+      color: #a83a3a;
+    }
+
+    .soon strong {
+      color: #a06b00;
+    }
+
+    .ok strong {
+      color: #3f7c55;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #6d6875;
+      margin-bottom: 6px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: none;
+      outline: none;
+      padding: 12px 13px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.82);
+      box-shadow: inset 0 0 0 1px rgba(110, 101, 130, 0.12);
+      font-family: Tahoma, sans-serif;
+      font-size: 0.95rem;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 11px 16px;
+      font-family: Tahoma, sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+      background: rgba(255,255,255,0.8);
+      box-shadow: 0 10px 25px rgba(74, 67, 92, 0.12);
+      color: #383441;
+    }
+
+    .primary-btn {
+      background: rgba(255, 246, 175, 0.95);
+    }
+
+    .danger-btn {
+      background: rgba(255, 215, 215, 0.9);
+    }
+
+    .section-tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 4px 0 14px;
+      margin-top: 16px;
+    }
+
+    .section-tab {
+      white-space: nowrap;
+      padding: 9px 13px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.65);
+      border: 1px solid rgba(255,255,255,0.8);
+      cursor: pointer;
+      font-size: 0.86rem;
+    }
+
+    .section-tab.active {
+      background: rgba(215, 220, 255, 0.9);
+      font-weight: 700;
+    }
+
+    .items {
+      display: grid;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .item-card {
+      background: rgba(255,255,255,0.7);
+      border: 1px solid rgba(255,255,255,0.8);
+      border-radius: 24px;
+      padding: 15px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .item-name {
+      font-weight: 800;
+      font-size: 1.05rem;
+      margin-bottom: 5px;
+    }
+
+    .item-meta {
+      color: #6d6875;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+
+    .status-pill {
+      display: inline-block;
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .status-expired {
+      background: #ffd7d7;
+      color: #8c2222;
+    }
+
+    .status-soon {
+      background: #fff1b8;
+      color: #805400;
+    }
+
+    .status-ok {
+      background: #dff6e5;
+      color: #2e6d40;
+    }
+
+    .empty {
+      text-align: center;
+      color: #77717f;
+      padding: 30px 10px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 14px;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .item-card {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div>
+        <h1>Expiry Tracker</h1>
+        <p class="subtitle">Clinic supplies, vaccines, emergency stock, and expiry alerts.</p>
+      </div>
+
+      <button id="signOutBtn" class="hidden">Sign out</button>
+    </div>
+
+    <div id="loginBox" class="glass-card">
+      <h2>Login required</h2>
+      <p class="subtitle">Only authorised users can view and update stock.</p>
+      <div class="button-row">
+        <button id="loginBtn" class="primary-btn">Login with Google</button>
+      </div>
+    </div>
+
+    <div id="trackerBox" class="hidden">
+      <div class="summary-grid">
+        <div class="summary-box expired">
+          <strong id="expiredCount">0</strong>
+          <span>Expired</span>
+        </div>
+
+        <div class="summary-box soon">
+          <strong id="soonCount">0</strong>
+          <span>Expiring within 1 month</span>
+        </div>
+
+        <div class="summary-box ok">
+          <strong id="okCount">0</strong>
+          <span>Okay</span>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <h2>Add / Update Item</h2>
+
+        <div class="form-grid">
+          <div>
+            <label>Item name</label>
+            <input id="itemName" placeholder="e.g. Salbutamol nebule" />
+          </div>
+
+          <div>
+            <label>Barcode</label>
+            <input id="barcode" placeholder="Scan or type barcode" inputmode="numeric" />
+          </div>
+
+          <div>
+            <label>Expiry date</label>
+            <input id="expiryDate" type="date" />
+          </div>
+
+          <div>
+            <label>Section</label>
+            <select id="section"></select>
+          </div>
+
+          <div>
+            <label>Quantity</label>
+            <input id="quantity" type="number" min="1" value="1" />
+          </div>
+
+          <div>
+            <label>Notes</label>
+            <input id="notes" placeholder="Optional" />
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button id="saveBtn" class="primary-btn">Save item</button>
+          <button id="clearBtn">Clear form</button>
+        </div>
+      </div>
+
+      <div class="section-tabs" id="sectionTabs"></div>
+
+      <div class="glass-card">
+        <h2 id="sectionTitle">All sections</h2>
+        <div id="itemsList" class="items"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Replace this Firebase config with the same config from your existing website.
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
+    import {
+      getAuth,
+      GoogleAuthProvider,
+      signInWithPopup,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      updateDoc,
+      deleteDoc,
+      doc,
+      query,
+      orderBy,
+      onSnapshot,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+
+    const firebaseConfig = {
+  apiKey: "AIzaSyBfWufweIG4RBH8yEeR9_qKvL-jPf6zBls",
+  authDomain: "ohexpiry.firebaseapp.com",
+  databaseURL: "https://ohexpiry-default-rtdb.firebaseio.com",
+  projectId: "ohexpiry",
+  storageBucket: "ohexpiry.firebasestorage.app",
+  messagingSenderId: "54496990115",
+  appId: "1:54496990115:web:170554aff6d5c17a6ac016",
+  measurementId: "G-87RTQ0LWFF"
+};
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const provider = new GoogleAuthProvider();
+
+    const authorisedEmails = [
+  "websitexproject@gmail.com",
+  "xeve06@gmail.com",
+  "nurse@onehealthgp.co.nz"
+];
+
+    const sections = [
+      "All sections",
+      "Triage room",
+      "Medication cupboard",
+      "Resus",
+      "Emergency cart",
+      "IV trolley",
+      "Plaster room",
+      "Vaccine fridge 1",
+      "Vaccine fridge 2",
+      "Emergency box"
+    ];
+
+    let stockItems = [];
+    let activeSection = "All sections";
+    let editingId = null;
+
+    const loginBox = document.getElementById("loginBox");
+    const trackerBox = document.getElementById("trackerBox");
+    const loginBtn = document.getElementById("loginBtn");
+    const signOutBtn = document.getElementById("signOutBtn");
+
+    const sectionSelect = document.getElementById("section");
+    const sectionTabs = document.getElementById("sectionTabs");
+    const sectionTitle = document.getElementById("sectionTitle");
+    const itemsList = document.getElementById("itemsList");
+
+    const itemNameInput = document.getElementById("itemName");
+    const barcodeInput = document.getElementById("barcode");
+    const expiryDateInput = document.getElementById("expiryDate");
+    const quantityInput = document.getElementById("quantity");
+    const notesInput = document.getElementById("notes");
+
+    const saveBtn = document.getElementById("saveBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    const expiredCount = document.getElementById("expiredCount");
+    const soonCount = document.getElementById("soonCount");
+    const okCount = document.getElementById("okCount");
+
+    function setupSections() {
+      sectionSelect.innerHTML = "";
+
+      sections
+        .filter(section => section !== "All sections")
+        .forEach(section => {
+          const option = document.createElement("option");
+          option.value = section;
+          option.textContent = section;
+          sectionSelect.appendChild(option);
+        });
+
+      sectionTabs.innerHTML = "";
+
+      sections.forEach(section => {
+        const tab = document.createElement("button");
+        tab.className = "section-tab";
+        tab.textContent = section;
+
+        if (section === activeSection) {
+          tab.classList.add("active");
+        }
+
+        tab.addEventListener("click", () => {
+          activeSection = section;
+          render();
+        });
+
+        sectionTabs.appendChild(tab);
+      });
+    }
+
+    function getExpiryStatus(expiryDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const expiry = new Date(expiryDate);
+      expiry.setHours(0, 0, 0, 0);
+
+      const diffMs = expiry - today;
+      const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffDays < 0) {
+        return {
+          label: "Expired",
+          className: "status-expired",
+          group: "expired"
+        };
+      }
+
+      if (diffDays <= 31) {
+        return {
+          label: `Expires in ${diffDays} day${diffDays === 1 ? "" : "s"}`,
+          className: "status-soon",
+          group: "soon"
+        };
+      }
+
+      return {
+        label: "Okay",
+        className: "status-ok",
+        group: "ok"
+      };
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return "";
+
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-NZ", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric"
+      });
+    }
+
+    function renderSummary() {
+      let expired = 0;
+      let soon = 0;
+      let ok = 0;
+
+      stockItems.forEach(item => {
+        const status = getExpiryStatus(item.expiryDate);
+
+        if (status.group === "expired") expired++;
+        if (status.group === "soon") soon++;
+        if (status.group === "ok") ok++;
+      });
+
+      expiredCount.textContent = expired;
+      soonCount.textContent = soon;
+      okCount.textContent = ok;
+    }
+
+    function renderItems() {
+      const filteredItems = activeSection === "All sections"
+        ? stockItems
+        : stockItems.filter(item => item.section === activeSection);
+
+      sectionTitle.textContent = activeSection;
+      itemsList.innerHTML = "";
+
+      if (filteredItems.length === 0) {
+        itemsList.innerHTML = `<div class="empty">No items yet for this section.</div>`;
+        return;
+      }
+
+      filteredItems.forEach(item => {
+        const status = getExpiryStatus(item.expiryDate);
+
+        const card = document.createElement("div");
+        card.className = "item-card";
+
+        card.innerHTML = `
+          <div>
+            <div class="item-name">${escapeHtml(item.itemName)}</div>
+            <div class="item-meta">
+              Section: ${escapeHtml(item.section)}<br>
+              Barcode: ${escapeHtml(item.barcode || "Not added")}<br>
+              Expiry: ${formatDate(item.expiryDate)}<br>
+              Quantity: ${item.quantity || 1}<br>
+              ${item.notes ? `Notes: ${escapeHtml(item.notes)}<br>` : ""}
+            </div>
+          </div>
+
+          <div>
+            <span class="status-pill ${status.className}">${status.label}</span>
+            <div class="button-row" style="margin-top: 10px;">
+              <button data-edit="${item.id}">Edit</button>
+              <button class="danger-btn" data-delete="${item.id}">Delete</button>
+            </div>
+          </div>
+        `;
+
+        itemsList.appendChild(card);
+      });
+
+      document.querySelectorAll("[data-edit]").forEach(button => {
+        button.addEventListener("click", () => {
+          const id = button.dataset.edit;
+          const item = stockItems.find(stock => stock.id === id);
+
+          if (!item) return;
+
+          editingId = id;
+
+          itemNameInput.value = item.itemName || "";
+          barcodeInput.value = item.barcode || "";
+          expiryDateInput.value = item.expiryDate || "";
+          sectionSelect.value = item.section || "Triage room";
+          quantityInput.value = item.quantity || 1;
+          notesInput.value = item.notes || "";
+
+          saveBtn.textContent = "Update item";
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+
+      document.querySelectorAll("[data-delete]").forEach(button => {
+        button.addEventListener("click", async () => {
+          const id = button.dataset.delete;
+          const confirmed = confirm("Delete this item?");
+
+          if (!confirmed) return;
+
+          await deleteDoc(doc(db, "expiryItems", id));
+        });
+      });
+    }
+
+    function render() {
+      setupSections();
+      renderSummary();
+      renderItems();
+    }
+
+    function clearForm() {
+      editingId = null;
+      itemNameInput.value = "";
+      barcodeInput.value = "";
+      expiryDateInput.value = "";
+      sectionSelect.value = "Triage room";
+      quantityInput.value = 1;
+      notesInput.value = "";
+      saveBtn.textContent = "Save item";
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    async function saveItem() {
+      const itemName = itemNameInput.value.trim();
+      const barcode = barcodeInput.value.trim();
+      const expiryDate = expiryDateInput.value;
+      const section = sectionSelect.value;
+      const quantity = Number(quantityInput.value || 1);
+      const notes = notesInput.value.trim();
+
+      if (!itemName || !expiryDate || !section) {
+        alert("Please add item name, expiry date, and section.");
+        return;
+      }
+
+      const data = {
+        itemName,
+        barcode,
+        expiryDate,
+        section,
+        quantity,
+        notes,
+        updatedAt: serverTimestamp()
+      };
+
+      if (editingId) {
+        await updateDoc(doc(db, "expiryItems", editingId), data);
+      } else {
+        await addDoc(collection(db, "expiryItems"), {
+          ...data,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      clearForm();
+    }
+
+    function loadItems() {
+      const q = query(collection(db, "expiryItems"), orderBy("expiryDate", "asc"));
+
+      onSnapshot(q, snapshot => {
+        stockItems = snapshot.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...docSnap.data()
+        }));
+
+        render();
+      });
+    }
+
+    loginBtn.addEventListener("click", async () => {
+      await signInWithPopup(auth, provider);
+    });
+
+    signOutBtn.addEventListener("click", async () => {
+      await signOut(auth);
+    });
+
+    saveBtn.addEventListener("click", saveItem);
+    clearBtn.addEventListener("click", clearForm);
+
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        loginBox.classList.remove("hidden");
+        trackerBox.classList.add("hidden");
+        signOutBtn.classList.add("hidden");
+        return;
+      }
+
+      if (!authorisedEmails.includes(user.email)) {
+        alert("You are not authorised to access this tracker.");
+        signOut(auth);
+        return;
+      }
+
+      loginBox.classList.add("hidden");
+      trackerBox.classList.remove("hidden");
+      signOutBtn.classList.remove("hidden");
+
+      setupSections();
+      loadItems();
+    });
+
+    setupSections();
+  </script>
+</body>
+</html>
