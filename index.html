@@ -708,10 +708,14 @@
     }
 	
 	function autofillFromBarcode(barcodeValue) {
-  const existingItem = stockItems.find(item => item.barcode === barcodeValue);
+  const matchingItems = stockItems
+    .filter(item => item.barcode === barcodeValue)
+    .sort((a, b) => new Date(b.expiryDate) - new Date(a.expiryDate));
+
+  const existingItem = matchingItems[0];
 
   if (!existingItem) {
-    scannerStatus.textContent = "New barcode detected. Please add item details.";
+    scannerStatus.textContent = "New barcode detected. Please add item details and expiry.";
     return;
   }
 
@@ -720,7 +724,10 @@
   quantityInput.value = existingItem.quantity || 1;
   notesInput.value = existingItem.notes || "";
 
-  scannerStatus.textContent = "Existing barcode found. Item details filled.";
+  // Safer: do NOT auto-fill expiry because same barcode can have different stock expiry.
+  expiryDateInput.value = "";
+
+  scannerStatus.textContent = `Existing barcode found. Last expiry recorded: ${formatDate(existingItem.expiryDate)}. Please confirm current pack expiry.`;
 }
 
 	async function startScanner() {
