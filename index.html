@@ -41,6 +41,21 @@
       font-size: clamp(1.8rem, 5vw, 3rem);
       letter-spacing: -0.04em;
     }
+	
+	.summary-box {
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.summary-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 35px rgba(74, 67, 92, 0.16);
+}
+
+.summary-box.active-filter {
+  background: rgba(215, 220, 255, 0.95);
+  box-shadow: 0 18px 40px rgba(74, 67, 92, 0.18);
+}
 
     .subtitle {
       margin: 6px 0 0;
@@ -149,6 +164,33 @@
       background: rgba(255, 215, 215, 0.9);
     }
 
+	.scanner-box {
+  margin-top: 14px;
+  border-radius: 24px;
+  padding: 12px;
+  background: rgba(255,255,255,0.58);
+  border: 1px solid rgba(255,255,255,0.75);
+  box-shadow: 0 12px 30px rgba(74, 67, 92, 0.12);
+}
+
+#scannerVideo {
+  width: 100%;
+  max-height: 320px;
+  border-radius: 20px;
+  object-fit: cover;
+  background: #111;
+}
+
+.scanner-actions {
+  margin-top: 10px;
+}
+
+.scanner-status {
+  margin: 8px 2px 0;
+  color: #6d6875;
+  font-size: 0.9rem;
+}
+	
     .section-tabs {
       display: flex;
       gap: 8px;
@@ -276,17 +318,17 @@
 
     <div id="trackerBox" class="hidden">
       <div class="summary-grid">
-        <div class="summary-box expired">
+        <div class="summary-box expired" id="expiredBox">
           <strong id="expiredCount">0</strong>
           <span>Expired</span>
         </div>
 
-        <div class="summary-box soon">
+        <div class="summary-box soon" id="soonBox">
           <strong id="soonCount">0</strong>
           <span>Expiring within 1 month</span>
         </div>
 
-        <div class="summary-box ok">
+        <div class="summary-box ok" id="okBox">
           <strong id="okCount">0</strong>
           <span>Okay</span>
         </div>
@@ -328,9 +370,20 @@
         </div>
 
         <div class="button-row">
-          <button id="saveBtn" class="primary-btn">Save item</button>
-          <button id="clearBtn">Clear form</button>
-        </div>
+  <button id="scanBtn">Scan barcode</button>
+  <button id="saveBtn" class="primary-btn">Save item</button>
+  <button id="clearBtn">Clear form</button>
+</div>
+
+<div id="scannerBox" class="scanner-box hidden">
+  <video id="scannerVideo" autoplay playsinline></video>
+
+  <div class="scanner-actions">
+    <button id="stopScanBtn" class="danger-btn">Stop scanning</button>
+  </div>
+
+  <p id="scannerStatus" class="scanner-status">Point camera at barcode.</p>
+</div>
       </div>
 
       <div class="section-tabs" id="sectionTabs"></div>
@@ -403,8 +456,9 @@
     ];
 
     let stockItems = [];
-    let activeSection = "All sections";
-    let editingId = null;
+	let activeSection = "All sections";
+	let activeStatusFilter = "all";
+	let editingId = null;
 
     const loginBox = document.getElementById("loginBox");
     const trackerBox = document.getElementById("trackerBox");
@@ -424,10 +478,23 @@
 
     const saveBtn = document.getElementById("saveBtn");
     const clearBtn = document.getElementById("clearBtn");
+	
+	const scanBtn = document.getElementById("scanBtn");
+	const scannerBox = document.getElementById("scannerBox");
+	const scannerVideo = document.getElementById("scannerVideo");
+	const stopScanBtn = document.getElementById("stopScanBtn");
+	const scannerStatus = document.getElementById("scannerStatus");
+
+	let scannerStream = null;
+	let barcodeDetector = null;
+	let scanning = false;
 
     const expiredCount = document.getElementById("expiredCount");
     const soonCount = document.getElementById("soonCount");
     const okCount = document.getElementById("okCount");
+	const expiredBox = document.getElementById("expiredBox");
+	const soonBox = document.getElementById("soonBox");
+	const okBox = document.getElementById("okBox");
 
     function setupSections() {
       sectionSelect.innerHTML = "";
@@ -453,9 +520,10 @@
         }
 
         tab.addEventListener("click", () => {
-          activeSection = section;
-          render();
-        });
+  activeSection = section;
+  activeStatusFilter = "all";
+  render();
+});
 
         sectionTabs.appendChild(tab);
       });
@@ -524,86 +592,109 @@
     }
 
     function renderItems() {
-      const filteredItems = activeSection === "All sections"
-        ? stockItems
-        : stockItems.filter(item => item.section === activeSection);
+  let filteredItems = activeSection === "All sections"
+    ? stockItems
+    : stockItems.filter(item => item.section === activeSection);
 
-      sectionTitle.textContent = activeSection;
-      itemsList.innerHTML = "";
+  if (activeStatusFilter !== "all") {
+    filteredItems = filteredItems.filter(item => {
+      const status = getExpiryStatus(item.expiryDate);
+      return status.group === activeStatusFilter;
+    });
+  }
 
-      if (filteredItems.length === 0) {
-        itemsList.innerHTML = `<div class="empty">No items yet for this section.</div>`;
-        return;
-      }
+  if (activeStatusFilter === "expired") {
+    sectionTitle.textContent = "Expired items";
+  } else if (activeStatusFilter === "soon") {
+    sectionTitle.textContent = "Expiring within 1 month";
+  } else if (activeStatusFilter === "ok") {
+    sectionTitle.textContent = "Okay items";
+  } else {
+    sectionTitle.textContent = activeSection;
+  }
 
-      filteredItems.forEach(item => {
-        const status = getExpiryStatus(item.expiryDate);
+  itemsList.innerHTML = "";
 
-        const card = document.createElement("div");
-        card.className = "item-card";
+  if (filteredItems.length === 0) {
+    itemsList.innerHTML = `<div class="empty">No items found.</div>`;
+    return;
+  }
 
-        card.innerHTML = `
-          <div>
-            <div class="item-name">${escapeHtml(item.itemName)}</div>
-            <div class="item-meta">
-              Section: ${escapeHtml(item.section)}<br>
-              Barcode: ${escapeHtml(item.barcode || "Not added")}<br>
-              Expiry: ${formatDate(item.expiryDate)}<br>
-              Quantity: ${item.quantity || 1}<br>
-              ${item.notes ? `Notes: ${escapeHtml(item.notes)}<br>` : ""}
-            </div>
-          </div>
+  filteredItems.forEach(item => {
+    const status = getExpiryStatus(item.expiryDate);
 
-          <div>
-            <span class="status-pill ${status.className}">${status.label}</span>
-            <div class="button-row" style="margin-top: 10px;">
-              <button data-edit="${item.id}">Edit</button>
-              <button class="danger-btn" data-delete="${item.id}">Delete</button>
-            </div>
-          </div>
-        `;
+    const card = document.createElement("div");
+    card.className = "item-card";
 
-        itemsList.appendChild(card);
-      });
+    card.innerHTML = `
+      <div>
+        <div class="item-name">${escapeHtml(item.itemName)}</div>
+        <div class="item-meta">
+          Section: ${escapeHtml(item.section)}<br>
+          Barcode: ${escapeHtml(item.barcode || "Not added")}<br>
+          Expiry: ${formatDate(item.expiryDate)}<br>
+          Quantity: ${item.quantity || 1}<br>
+          ${item.notes ? `Notes: ${escapeHtml(item.notes)}<br>` : ""}
+        </div>
+      </div>
 
-      document.querySelectorAll("[data-edit]").forEach(button => {
-        button.addEventListener("click", () => {
-          const id = button.dataset.edit;
-          const item = stockItems.find(stock => stock.id === id);
+      <div>
+        <span class="status-pill ${status.className}">${status.label}</span>
+        <div class="button-row" style="margin-top: 10px;">
+          <button data-edit="${item.id}">Edit</button>
+          <button class="danger-btn" data-delete="${item.id}">Delete</button>
+        </div>
+      </div>
+    `;
 
-          if (!item) return;
+    itemsList.appendChild(card);
+  });
 
-          editingId = id;
+  document.querySelectorAll("[data-edit]").forEach(button => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.edit;
+      const item = stockItems.find(stock => stock.id === id);
 
-          itemNameInput.value = item.itemName || "";
-          barcodeInput.value = item.barcode || "";
-          expiryDateInput.value = item.expiryDate || "";
-          sectionSelect.value = item.section || "Triage room";
-          quantityInput.value = item.quantity || 1;
-          notesInput.value = item.notes || "";
+      if (!item) return;
 
-          saveBtn.textContent = "Update item";
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-      });
+      editingId = id;
 
-      document.querySelectorAll("[data-delete]").forEach(button => {
-        button.addEventListener("click", async () => {
-          const id = button.dataset.delete;
-          const confirmed = confirm("Delete this item?");
+      itemNameInput.value = item.itemName || "";
+      barcodeInput.value = item.barcode || "";
+      expiryDateInput.value = item.expiryDate || "";
+      sectionSelect.value = item.section || "Triage room";
+      quantityInput.value = item.quantity || 1;
+      notesInput.value = item.notes || "";
 
-          if (!confirmed) return;
+      saveBtn.textContent = "Update item";
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  });
 
-          await deleteDoc(doc(db, "expiryItems", id));
-        });
-      });
-    }
+  document.querySelectorAll("[data-delete]").forEach(button => {
+    button.addEventListener("click", async () => {
+      const id = button.dataset.delete;
+      const confirmed = confirm("Delete this item?");
 
+      if (!confirmed) return;
+
+      await deleteDoc(doc(db, "expiryItems", id));
+    });
+  });
+}
+
+	function renderActiveSummaryFilter() {
+  expiredBox.classList.toggle("active-filter", activeStatusFilter === "expired");
+  soonBox.classList.toggle("active-filter", activeStatusFilter === "soon");
+  okBox.classList.toggle("active-filter", activeStatusFilter === "ok");
+}
+	
     function render() {
-      setupSections();
-      renderSummary();
-      renderItems();
-    }
+  setupSections();
+  renderSummary();
+  renderActiveSummaryFilter();
+  renderItems();
+}
 
     function clearForm() {
       editingId = null;
@@ -615,6 +706,94 @@
       notesInput.value = "";
       saveBtn.textContent = "Save item";
     }
+	
+	function autofillFromBarcode(barcodeValue) {
+  const existingItem = stockItems.find(item => item.barcode === barcodeValue);
+
+  if (!existingItem) {
+    scannerStatus.textContent = "New barcode detected. Please add item details.";
+    return;
+  }
+
+  itemNameInput.value = existingItem.itemName || "";
+  sectionSelect.value = existingItem.section || "Triage room";
+  quantityInput.value = existingItem.quantity || 1;
+  notesInput.value = existingItem.notes || "";
+
+  scannerStatus.textContent = "Existing barcode found. Item details filled.";
+}
+
+	async function startScanner() {
+  if (!("BarcodeDetector" in window)) {
+    alert("Barcode scanning is not supported on this browser. You can still type the barcode manually.");
+    return;
+  }
+
+  try {
+    barcodeDetector = new BarcodeDetector({
+      formats: [
+        "code_128",
+        "code_39",
+        "ean_13",
+        "ean_8",
+        "upc_a",
+        "upc_e",
+        "qr_code"
+      ]
+    });
+
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment"
+      }
+    });
+
+    scannerVideo.srcObject = scannerStream;
+    scannerBox.classList.remove("hidden");
+    scannerStatus.textContent = "Point camera at barcode.";
+    scanning = true;
+
+    scanLoop();
+  } catch (error) {
+    console.error(error);
+    alert("Camera could not start. Check browser camera permission.");
+    stopScanner();
+  }
+}
+
+async function scanLoop() {
+  if (!scanning) return;
+
+  try {
+    const barcodes = await barcodeDetector.detect(scannerVideo);
+
+    if (barcodes.length > 0) {
+      const barcodeValue = barcodes[0].rawValue;
+
+      barcodeInput.value = barcodeValue;
+      autofillFromBarcode(barcodeValue);
+
+      stopScanner();
+      return;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
+  requestAnimationFrame(scanLoop);
+}
+
+function stopScanner() {
+  scanning = false;
+
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(track => track.stop());
+    scannerStream = null;
+  }
+
+  scannerVideo.srcObject = null;
+  scannerBox.classList.add("hidden");
+}
 
     function escapeHtml(value) {
       return String(value)
@@ -681,8 +860,37 @@
       await signOut(auth);
     });
 
-    saveBtn.addEventListener("click", saveItem);
-    clearBtn.addEventListener("click", clearForm);
+    scanBtn.addEventListener("click", startScanner);
+	stopScanBtn.addEventListener("click", stopScanner);
+
+	saveBtn.addEventListener("click", saveItem);
+	clearBtn.addEventListener("click", clearForm);
+	
+	barcodeInput.addEventListener("change", () => {
+  const barcodeValue = barcodeInput.value.trim();
+
+  if (!barcodeValue) return;
+
+  autofillFromBarcode(barcodeValue);
+});
+	
+	expiredBox.addEventListener("click", () => {
+  activeStatusFilter = activeStatusFilter === "expired" ? "all" : "expired";
+  activeSection = "All sections";
+  render();
+});
+
+soonBox.addEventListener("click", () => {
+  activeStatusFilter = activeStatusFilter === "soon" ? "all" : "soon";
+  activeSection = "All sections";
+  render();
+});
+
+okBox.addEventListener("click", () => {
+  activeStatusFilter = activeStatusFilter === "ok" ? "all" : "ok";
+  activeSection = "All sections";
+  render();
+});
 
     onAuthStateChanged(auth, user => {
       if (!user) {
