@@ -399,12 +399,13 @@
     // Replace this Firebase config with the same config from your existing website.
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
     import {
-      getAuth,
-      GoogleAuthProvider,
-      signInWithPopup,
-      signOut,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
+  getAuth,
+  GoogleAuthProvider,
+  signInWithRedirect,
+  getRedirectResult,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
     import {
       getFirestore,
@@ -769,6 +770,44 @@
   scannerStatus.classList.remove("hidden");
 }
 
+async function startScanner() {
+  if (!("BarcodeDetector" in window)) {
+    alert("Barcode scanning is not supported on this browser. You can still type the barcode manually.");
+    return;
+  }
+
+  try {
+    barcodeDetector = new BarcodeDetector({
+      formats: [
+        "code_128",
+        "code_39",
+        "ean_13",
+        "ean_8",
+        "upc_a",
+        "upc_e",
+        "qr_code"
+      ]
+    });
+
+    scannerStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment"
+      }
+    });
+
+    scannerVideo.srcObject = scannerStream;
+    scannerBox.classList.remove("hidden");
+    scannerStatus.textContent = "Point camera at barcode.";
+    scanning = true;
+
+    scanLoop();
+  } catch (error) {
+    console.error(error);
+    alert("Camera could not start. Check browser camera permission.");
+    stopScanner();
+  }
+}
+
 async function scanLoop() {
   if (!scanning) return;
 
@@ -868,8 +907,13 @@ if (!expiryDate) {
     }
 
     loginBtn.addEventListener("click", async () => {
-      await signInWithPopup(auth, provider);
-    });
+  await signInWithRedirect(auth, provider);
+});
+
+getRedirectResult(auth).catch(error => {
+  console.error("Redirect login error:", error);
+  alert(error.message);
+});
 
     signOutBtn.addEventListener("click", async () => {
       await signOut(auth);
