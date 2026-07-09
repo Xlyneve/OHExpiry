@@ -69,21 +69,7 @@
       letter-spacing: -0.04em;
     }
 	
-	.summary-box {
-  cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
-}
-
-.summary-box:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 35px rgba(74, 67, 92, 0.16);
-}
-
-.summary-box.active-filter {
-  background: rgba(255, 111, 0, 0.14);
-  border-color: rgba(255, 111, 0, 0.28);
-  box-shadow: 0 18px 40px rgba(255, 111, 0, 0.16);
-}
+	
 
     .subtitle {
       margin: 6px 0 0;
@@ -101,30 +87,54 @@
       padding: 18px;
     }
 
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
-      margin-bottom: 16px;
-    }
+    .summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
 
-    .summary-box {
-      border-radius: 22px;
-      padding: 16px;
-      background: rgba(255,255,255,0.6);
-      border: 1px solid rgba(255,255,255,0.7);
-    }
+.summary-pill {
+  border-radius: 18px;
+  padding: 10px 8px;
+  min-height: 58px;
+  background: rgba(255,255,255,0.66);
+  border: 1px solid rgba(255,255,255,0.78);
+  box-shadow: 0 10px 25px rgba(54, 54, 60, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  line-height: 1.1;
+  cursor: pointer;
+}
 
-    .summary-box strong {
-      display: block;
-      font-size: 1.7rem;
-      margin-bottom: 4px;
-    }
+.summary-pill strong {
+  display: block;
+  font-size: 1.25rem;
+  margin-bottom: 3px;
+}
 
-    .summary-box span {
-      color: #6d6875;
-      font-size: 0.9rem;
-    }
+.summary-pill span {
+  color: #6d6875;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.summary-pill.active-filter {
+  background: rgba(255, 111, 0, 0.14);
+  border-color: rgba(255, 111, 0, 0.28);
+  box-shadow: 0 14px 30px rgba(255, 111, 0, 0.14);
+}
+
+.list-view-button-row {
+  margin-bottom: 14px;
+}
+
+#viewAllBtn {
+  width: 100%;
+  background: rgba(255,255,255,0.72);
+}
 
     .expired strong {
       color: #a83a3a;
@@ -436,6 +446,68 @@
       display: none;
     }
 	
+	.list-view {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  overflow-y: auto;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background:
+    radial-gradient(circle at top left, rgba(255, 111, 0, 0.16), transparent 28%),
+    linear-gradient(135deg, #f4f4f4, #ffffff 45%, #ececef);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.list-view-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border-radius: 26px;
+  background: rgba(255,255,255,0.68);
+  border: 1px solid rgba(255,255,255,0.82);
+  box-shadow: 0 14px 35px rgba(54, 54, 60, 0.1);
+}
+
+.list-view-header h2 {
+  margin: 0;
+}
+
+.list-search-wrap {
+  position: sticky;
+  top: max(10px, env(safe-area-inset-top));
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(255,255,255,0.86);
+  box-shadow: 0 14px 35px rgba(54, 54, 60, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.search-icon {
+  font-size: 1rem;
+  opacity: 0.65;
+}
+
+#listSearchInput {
+  background: transparent;
+  box-shadow: none;
+  padding: 8px 4px;
+}
+
+.list-location-tabs {
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+	
 	/* iPhone / mobile comfort */
 html {
   -webkit-text-size-adjust: 100%;
@@ -536,9 +608,32 @@ h1 {
     align-items: flex-start;
   }
 
-  .summary-grid {
-    grid-template-columns: 1fr;
-  }
+  .summary-strip {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.summary-pill {
+  min-height: 54px;
+  padding: 8px 5px;
+  border-radius: 16px;
+}
+
+.summary-pill strong {
+  font-size: 1.15rem;
+}
+
+.summary-pill span {
+  font-size: 0.68rem;
+}
+
+.list-view-header {
+  align-items: flex-start;
+}
+
+.list-view-header .subtitle {
+  font-size: 0.82rem;
+}
 
   .form-grid {
     grid-template-columns: 1fr;
@@ -630,22 +725,26 @@ h1 {
     </div>
 
     <div id="trackerBox" class="hidden">
-      <div class="summary-grid">
-        <div class="summary-box expired" id="expiredBox">
-          <strong id="expiredCount">0</strong>
-          <span>Expired</span>
-        </div>
+      <div class="summary-strip">
+  <button class="summary-pill expired" id="expiredBox">
+    <strong id="expiredCount">0</strong>
+    <span>Expired</span>
+  </button>
 
-        <div class="summary-box soon" id="soonBox">
-          <strong id="soonCount">0</strong>
-          <span>Expiring within 1 month</span>
-        </div>
+  <button class="summary-pill soon" id="soonBox">
+    <strong id="soonCount">0</strong>
+    <span>Expiring soon</span>
+  </button>
 
-        <div class="summary-box ok" id="okBox">
-          <strong id="okCount">0</strong>
-          <span>Okay</span>
-        </div>
-      </div>
+  <button class="summary-pill ok" id="okBox">
+    <strong id="okCount">0</strong>
+    <span>Okay</span>
+  </button>
+</div>
+
+<div class="button-row list-view-button-row">
+  <button id="viewAllBtn">View all list</button>
+</div>
 
       <div class="glass-card">
         <h2>Add / Update Item</h2>
@@ -733,6 +832,25 @@ h1 {
         <h2 id="sectionTitle">All sections</h2>
         <div id="itemsList" class="items"></div>
       </div>
+	  <div id="listView" class="list-view hidden">
+  <div class="list-view-header">
+    <button id="closeListViewBtn">Back</button>
+
+    <div>
+      <h2>All stock list</h2>
+      <p class="subtitle">Search by item, barcode, expiry, notes, or location.</p>
+    </div>
+  </div>
+
+  <div class="list-search-wrap">
+    <span class="search-icon">🔍</span>
+    <input id="listSearchInput" placeholder="Search stock..." />
+  </div>
+
+  <div class="section-tabs list-location-tabs" id="listLocationTabs"></div>
+
+  <div id="allListItems" class="items"></div>
+</div>
     </div>
   </div>
 	
@@ -851,6 +969,16 @@ h1 {
 	const expiredBox = document.getElementById("expiredBox");
 	const soonBox = document.getElementById("soonBox");
 	const okBox = document.getElementById("okBox");
+	
+	const viewAllBtn = document.getElementById("viewAllBtn");
+	const listView = document.getElementById("listView");
+	const closeListViewBtn = document.getElementById("closeListViewBtn");
+	const listSearchInput = document.getElementById("listSearchInput");
+	const listLocationTabs = document.getElementById("listLocationTabs");
+	const allListItems = document.getElementById("allListItems");
+
+	let listViewSection = "All sections";
+	let listSearchTerm = "";
 
     function setupSections() {
       sectionSelect.innerHTML = "";
@@ -1113,7 +1241,97 @@ document.querySelectorAll("[data-dispose]").forEach(button => {
   });
 });
 }
+	function renderListLocationTabs() {
+  listLocationTabs.innerHTML = "";
 
+  sections.forEach(section => {
+    const tab = document.createElement("button");
+    tab.className = "section-tab";
+    tab.textContent = section;
+
+    if (section === listViewSection) {
+      tab.classList.add("active");
+    }
+
+    tab.addEventListener("click", () => {
+      listViewSection = section;
+      renderFullList();
+    });
+
+    listLocationTabs.appendChild(tab);
+  });
+}
+
+function renderFullList() {
+  let filteredItems = listViewSection === "All sections"
+    ? stockItems
+    : stockItems.filter(item => item.section === listViewSection);
+
+  const search = listSearchTerm.toLowerCase().trim();
+
+  if (search) {
+    filteredItems = filteredItems.filter(item => {
+      const text = [
+        item.itemName,
+        item.barcode,
+        item.expiryText,
+        item.expiryDate,
+        item.section,
+        item.notes
+      ].join(" ").toLowerCase();
+
+      return text.includes(search);
+    });
+  }
+
+  allListItems.innerHTML = "";
+
+  if (filteredItems.length === 0) {
+    allListItems.innerHTML = `<div class="empty">No items found.</div>`;
+    return;
+  }
+
+  filteredItems.forEach(item => {
+    const status = getExpiryStatus(item.expiryDate);
+
+    const card = document.createElement("div");
+    card.className = "item-card";
+
+    card.innerHTML = `
+      <div>
+        <div class="item-name">${escapeHtml(item.itemName)}</div>
+        <div class="item-meta">
+          Section: ${escapeHtml(item.section)}<br>
+          Barcode: ${escapeHtml(item.barcode || "Not added")}<br>
+          Expiry: ${escapeHtml(item.expiryText || formatDate(item.expiryDate))}<br>
+          Quantity: ${item.quantity || 1}<br>
+          ${item.notes ? `Notes: ${escapeHtml(item.notes)}<br>` : ""}
+        </div>
+      </div>
+
+      <div>
+        <span class="status-pill ${status.className}">${status.label}</span>
+      </div>
+    `;
+
+    allListItems.appendChild(card);
+  });
+}
+
+function openListView() {
+  listView.classList.remove("hidden");
+  listViewSection = "All sections";
+  listSearchTerm = "";
+  listSearchInput.value = "";
+
+  renderListLocationTabs();
+  renderFullList();
+}
+
+function closeListView() {
+  listView.classList.add("hidden");
+}
+	
 	function renderActiveSummaryFilter() {
   expiredBox.classList.toggle("active-filter", activeStatusFilter === "expired");
   soonBox.classList.toggle("active-filter", activeStatusFilter === "soon");
@@ -1125,6 +1343,11 @@ document.querySelectorAll("[data-dispose]").forEach(button => {
   renderSummary();
   renderActiveSummaryFilter();
   renderItems();
+
+  if (!listView.classList.contains("hidden")) {
+    renderListLocationTabs();
+    renderFullList();
+  }
 }
 
     function clearForm() {
@@ -1534,6 +1757,14 @@ getRedirectResult(auth).catch(error => {
 	saveBtn.addEventListener("click", saveItem);
 	clearBtn.addEventListener("click", clearForm);
 	sectionSelect.addEventListener("change", rememberSelectedSection);
+	
+	viewAllBtn.addEventListener("click", openListView);
+closeListViewBtn.addEventListener("click", closeListView);
+
+listSearchInput.addEventListener("input", () => {
+  listSearchTerm = listSearchInput.value;
+  renderFullList();
+});
 	
 	expiryDateInput.addEventListener("input", () => {
   let value = expiryDateInput.value.replace(/[^\d]/g, "");
