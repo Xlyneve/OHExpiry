@@ -2590,17 +2590,23 @@ okBox.addEventListener("click", () => {
 });
 
     function showLoggedOut() {
+  console.log("Showing logged out UI");
+
   loginBox.classList.remove("hidden");
   trackerBox.classList.add("hidden");
   signOutBtn.classList.add("hidden");
 }
 
 function showLoggedIn() {
+  console.log("Showing logged in UI");
+
   loginBox.classList.add("hidden");
   trackerBox.classList.remove("hidden");
   signOutBtn.classList.remove("hidden");
 
   setupSections();
+  renderAddFormState();
+  clearForm();
   loadItems();
 }
 
