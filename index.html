@@ -165,10 +165,16 @@
 
 .list-view-button-row {
   margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+#quickScanBtn,
+#viewAllBtn {
+  width: 100%;
 }
 
 #viewAllBtn {
-  width: 100%;
   background: rgba(255,255,255,0.72);
 }
 
@@ -753,10 +759,9 @@ h1 {
     padding: 15px;
   }
 
-  .button-row {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
+  .list-view-button-row {
+  grid-template-columns: 1fr 1fr;
+}
 
   .button-row button {
     width: 100%;
@@ -860,11 +865,12 @@ h1 {
   </button>
 </div>
 
-<div class="button-row list-view-button-row">
+	<div class="button-row list-view-button-row">
+  <button id="quickScanBtn" class="primary-btn">Scan barcode</button>
   <button id="viewAllBtn">View all list</button>
 </div>
 
-      <div class="glass-card add-item-card">
+<div class="glass-card add-item-card">
   <button id="toggleAddFormBtn" class="add-form-toggle" type="button">
     <span id="addFormIcon">＋</span>
     <span>Add / Update Item</span>
@@ -911,8 +917,7 @@ h1 {
         </div>
 
         <div class="button-row">
-  <button id="scanBtn" class="primary-btn">Scan barcode</button>
-  <button id="saveBtn">Save item</button>
+  <button id="saveBtn" class="primary-btn">Save item</button>
   <button id="clearBtn">Clear form</button>
 </div>
 
@@ -1095,7 +1100,7 @@ h1 {
 	const addFormContent = document.getElementById("addFormContent");
 	const addFormIcon = document.getElementById("addFormIcon");
 	
-	const scanBtn = document.getElementById("scanBtn");
+	const quickScanBtn = document.getElementById("quickScanBtn");
 	const scannerBox = document.getElementById("scannerBox");
 	const scannerVideo = document.getElementById("scannerVideo");
 	const html5Reader = document.getElementById("html5Reader");
@@ -2011,7 +2016,7 @@ getRedirectResult(auth).catch(error => {
       await signOut(auth);
     });
 
-    scanBtn.addEventListener("click", async () => {
+    quickScanBtn.addEventListener("click", async () => {
   const initials = await askScannerInitials();
 
   if (!initials) return;
