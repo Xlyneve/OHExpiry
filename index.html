@@ -1197,6 +1197,9 @@ provider.setCustomParameters({
   prompt: "select_account"
 });
 
+const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
     const authorisedEmails = [
   "websitexproject@gmail.com",
   "xeve06@gmail.com",
@@ -2141,11 +2144,11 @@ async function startScanner() {
   scannerBox.classList.remove("hidden");
   scannerStatus.textContent = "Starting camera...";
 
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  const scannerIsIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 // iPhone/iPad works better with html5-qrcode fallback
-if (isIOS || !("BarcodeDetector" in window)) {
+if (scannerIsIOSDevice || !("BarcodeDetector" in window)) {
   startHtml5Scanner();
   return;
 }
@@ -2421,22 +2424,24 @@ function loadItems() {
   try {
     await setPersistence(auth, browserLocalPersistence);
 
-    // Popup is usually cleaner after logout/login on GitHub Pages.
+    if (isIOSDevice) {
+      // iPhone/iPad works better with redirect, not popup.
+      await signInWithRedirect(auth, provider);
+      return;
+    }
+
+    // Desktop/laptop can use popup.
     await signInWithPopup(auth, provider);
   } catch (error) {
-    console.error("Popup login failed, trying redirect:", error);
+    console.error("Login error:", error);
 
-    // If popup is blocked, fall back to redirect.
-    if (
-      error.code === "auth/popup-blocked" ||
-      error.code === "auth/popup-closed-by-user" ||
-      error.code === "auth/cancelled-popup-request"
-    ) {
+    // Backup: if popup fails on desktop, use redirect.
+    if (!isIOSDevice) {
       try {
         await signInWithRedirect(auth, provider);
         return;
       } catch (redirectError) {
-        console.error("Redirect login error:", redirectError);
+        console.error("Redirect fallback error:", redirectError);
         alert(redirectError.message);
       }
     } else {
