@@ -552,6 +552,57 @@
   margin-bottom: 4px;
 }
 
+.item-location-highlight {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border-radius: 10px;
+  padding: 2px 7px;
+  color: #2f2d35;
+  font-size: 0.84rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.75);
+}
+
+.item-card.status-focused .item-location-highlight {
+  font-size: 0.9rem;
+}
+
+/* location colours */
+.loc-triage-room {
+  background: rgba(255, 241, 184, 0.75);
+}
+
+.loc-medication-cupboard {
+  background: rgba(221, 235, 255, 0.78);
+}
+
+.loc-resus {
+  background: rgba(255, 215, 215, 0.8);
+}
+
+.loc-emergency-cart {
+  background: rgba(255, 224, 194, 0.82);
+}
+
+.loc-iv-trolley {
+  background: rgba(221, 246, 229, 0.82);
+}
+
+.loc-plaster-room {
+  background: rgba(236, 226, 255, 0.8);
+}
+
+.loc-vaccine-fridge-1,
+.loc-vaccine-fridge-2 {
+  background: rgba(210, 245, 255, 0.82);
+}
+
+.loc-emergency-box {
+  background: rgba(255, 222, 239, 0.82);
+}
+
 .meta-dot::before {
   content: "·";
   margin-right: 7px;
@@ -1622,7 +1673,9 @@ function getKnownItemNameForBarcode(searchKeys) {
     const status = getExpiryStatus(item.expiryDate);
 
     const card = document.createElement("div");
-    card.className = "item-card";
+    card.className = activeStatusFilter !== "all"
+  ? "item-card status-focused"
+  : "item-card";
 
     card.innerHTML = `
   <div>
@@ -1630,7 +1683,7 @@ function getKnownItemNameForBarcode(searchKeys) {
 
     <div class="item-meta">
       <div class="item-meta-main">
-        <span>${escapeHtml(item.section)}</span>
+        <span class="item-location-highlight ${getLocationClass(item.section)}">${escapeHtml(item.section)}</span>
         <span class="meta-dot">Exp: ${escapeHtml(item.expiryText || formatDate(item.expiryDate))}</span>
         <span class="meta-dot">Qty ${item.quantity || 1}</span>
       </div>
@@ -1795,7 +1848,7 @@ function renderFullList() {
 
     <div class="item-meta">
       <div class="item-meta-main">
-        <span>${escapeHtml(item.section)}</span>
+        <span class="item-location-highlight ${getLocationClass(item.section)}">${escapeHtml(item.section)}</span>
         <span class="meta-dot">Exp: ${escapeHtml(item.expiryText || formatDate(item.expiryDate))}</span>
         <span class="meta-dot">Qty ${item.quantity || 1}</span>
       </div>
@@ -2292,6 +2345,16 @@ async function stopScanner() {
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
     }
+	
+	function getLocationClass(section) {
+  return "loc-" + String(section || "")
+    .toLowerCase()
+    .replaceAll("&", "and")
+    .replaceAll("/", "-")
+    .replaceAll("+", "")
+    .replaceAll(" ", "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
 
     async function saveItem() {
 	const itemName = itemNameInput.value.trim();
