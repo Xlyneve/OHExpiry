@@ -1255,18 +1255,22 @@ h1 {
 	let listSearchTerm = "";
 
     function setupSections() {
-      sectionSelect.innerHTML = "";
+  const savedSection = getSavedSection();
 
-      sections
-        .filter(section => section !== "All sections")
-        .forEach(section => {
-          const option = document.createElement("option");
-          option.value = section;
-          option.textContent = section;
-          sectionSelect.appendChild(option);
-        });
+  sectionSelect.innerHTML = "";
 
-      sectionTabs.innerHTML = "";
+  sections
+    .filter(section => section !== "All sections")
+    .forEach(section => {
+      const option = document.createElement("option");
+      option.value = section;
+      option.textContent = section;
+      sectionSelect.appendChild(option);
+    });
+
+  sectionSelect.value = savedSection;
+
+  sectionTabs.innerHTML = "";
 
       sections.forEach(section => {
         const tab = document.createElement("button");
@@ -1280,6 +1284,12 @@ h1 {
         tab.addEventListener("click", () => {
   activeSection = section;
   activeStatusFilter = "all";
+
+  if (section !== "All sections") {
+    sectionSelect.value = section;
+    localStorage.setItem(LAST_SECTION_KEY, section);
+  }
+
   render();
 });
 
@@ -1560,6 +1570,12 @@ document.querySelectorAll("[data-dispose]").forEach(button => {
 
     tab.addEventListener("click", () => {
   listViewSection = section;
+
+  if (section !== "All sections") {
+    sectionSelect.value = section;
+    localStorage.setItem(LAST_SECTION_KEY, section);
+  }
+
   renderListLocationTabs();
   renderFullList();
 });
@@ -1815,11 +1831,12 @@ async function autofillFromBarcode(barcodeValue) {
   }
 
   if (choice === "differentLocation") {
-    sectionSelect.value = getSavedSection();
-    expiryDateInput.value = existingItem.expiryText || existingItem.expiryDate || "";
+  sectionSelect.value = getSavedSection();
+  rememberSelectedSection();
+  expiryDateInput.value = existingItem.expiryText || existingItem.expiryDate || "";
 
-    showFormHint("Same item and same expiry. Choose the new location, then press Save item.");
-  }
+  showFormHint("Same item and same expiry. Choose the new location, then press Save item.");
+}
 	openAddForm();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -2020,7 +2037,7 @@ async function stopScanner() {
   const expiryText = expiryDateInput.value.trim();
   const expiryDate = normaliseExpiryDate(expiryText);
   const section = sectionSelect.value;
-  rememberSelectedSection();
+localStorage.setItem(LAST_SECTION_KEY, section);
   const quantity = Number(quantityInput.value || 1);
   const notes = notesInput.value.trim();
 
@@ -2054,23 +2071,26 @@ async function stopScanner() {
 
   // If same barcode + same expiry + same section exists, add quantity instead of duplicating.
   if (matchingSameBatch && !editingId) {
-    const newQuantity = Number(matchingSameBatch.quantity || 1) + quantity;
+  const newQuantity = Number(matchingSameBatch.quantity || 1) + quantity;
 
-    await updateDoc(doc(db, "expiryItems", matchingSameBatch.id), {
-      quantity: newQuantity,
-      itemName,
-      barcode,
-      expiryDate,
-      expiryText,
-      section,
-      notes,
-      updatedAt: serverTimestamp()
-    });
+  await updateDoc(doc(db, "expiryItems", matchingSameBatch.id), {
+    quantity: newQuantity,
+    itemName,
+    barcode,
+    expiryDate,
+    expiryText,
+    section,
+    notes,
+    lastScannedBy: currentScannerInitials || matchingSameBatch.lastScannedBy || matchingSameBatch.addedBy || "Manual",
+    updatedAt: serverTimestamp()
+  });
 
-    clearForm();
-showFormHint("Same item and same expiry found. Quantity updated.");
-return;
-  }
+  localStorage.setItem(LAST_SECTION_KEY, section);
+
+  clearForm();
+  showFormHint("Same item and same expiry found. Quantity updated.");
+  return;
+}
 
   const data = {
   itemName,
@@ -2138,7 +2158,9 @@ getRedirectResult(auth).catch(error => {
 
 	saveBtn.addEventListener("click", saveItem);
 	clearBtn.addEventListener("click", clearForm);
-	sectionSelect.addEventListener("change", rememberSelectedSection);
+	sectionSelect.addEventListener("change", () => {
+  rememberSelectedSection();
+});
 	toggleAddFormBtn.addEventListener("click", toggleAddForm);
 	
 	document.addEventListener("click", () => {
