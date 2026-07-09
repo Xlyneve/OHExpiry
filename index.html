@@ -49,17 +49,25 @@
 }
 
 .brand-wrap {
+  width: 100%;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   min-width: 0;
+  text-align: center;
+}
+
+.brand-wrap > div {
+  text-align: center;
 }
 
 .clinic-logo {
-  width: min(260px, 48vw);
+  width: min(230px, 56vw);
   height: auto;
   display: block;
   object-fit: contain;
+  margin: 0 auto;
   filter: drop-shadow(0 8px 18px rgba(255, 104, 0, 0.18));
 }
 
@@ -100,10 +108,10 @@
 }
 
     h1 {
-      margin: 0;
-      font-size: clamp(1.8rem, 5vw, 3rem);
-      letter-spacing: -0.04em;
-    }
+  margin: 0;
+  font-size: clamp(1.45rem, 4vw, 2.4rem);
+  letter-spacing: -0.035em;
+}
 	
 	
 
@@ -702,21 +710,42 @@ button {
   
   .brand-wrap {
   width: 100%;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+  text-align: center;
+}
+
+.brand-wrap > div {
+  width: 100%;
+  text-align: center;
 }
 
 .clinic-logo {
-  width: min(240px, 78vw);
+  width: min(190px, 62vw);
 }
 
 .glass-header {
-  border-radius: 26px;
+  border-radius: 24px;
+  padding: 12px;
 }
 
 h1 {
-  font-size: clamp(1.7rem, 8vw, 2.4rem);
+  font-size: clamp(1.25rem, 6vw, 1.75rem);
+  line-height: 1.05;
+}
+
+.subtitle {
+  font-size: 0.78rem;
+  line-height: 1.25;
+  margin-top: 4px;
+}
+
+#signOutBtn {
+  width: 100%;
+  max-width: 180px;
+  margin: 4px auto 0;
 }
 
   .topbar {
