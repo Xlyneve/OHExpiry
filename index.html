@@ -10,6 +10,13 @@
     * {
       box-sizing: border-box;
     }
+	
+	@font-face {
+  font-family: "Bebas";
+  src: url("Bebas-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
 
     body {
       margin: 0;
@@ -51,19 +58,20 @@
 .brand-wrap {
   width: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
+  gap: 8px;
   min-width: 0;
   text-align: center;
 }
 
 .brand-wrap > div {
+  width: 100%;
   text-align: center;
 }
 
 .clinic-logo {
-  width: min(230px, 56vw);
+  width: min(340px, 72vw);
   height: auto;
   display: block;
   object-fit: contain;
@@ -109,8 +117,11 @@
 
     h1 {
   margin: 0;
-  font-size: clamp(1.45rem, 4vw, 2.4rem);
-  letter-spacing: -0.035em;
+  font-family: "Bebas", Tahoma, sans-serif;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  font-weight: normal;
 }
 	
 	
@@ -155,14 +166,19 @@
 
 .summary-pill strong {
   display: block;
-  font-size: 1.25rem;
-  margin-bottom: 3px;
+  font-size: 1.55rem;
+  margin-bottom: 4px;
+  font-family: "Bebas", Tahoma, sans-serif;
+  font-weight: normal;
+  letter-spacing: 0.04em;
 }
 
 .summary-pill span {
   color: #6d6875;
-  font-size: 0.72rem;
+  font-size: 1.5rem;
   text-align: center;
+  font-family: "Bebas", Tahoma, sans-serif;
+  letter-spacing: 0.04em;
 }
 
 .summary-pill.active-filter {
@@ -233,16 +249,22 @@
     }
 
     button {
-      border: none;
-      border-radius: 999px;
-      padding: 11px 16px;
-      font-family: Tahoma, sans-serif;
-      font-weight: 700;
-      cursor: pointer;
-      background: rgba(255,255,255,0.8);
-      box-shadow: 0 10px 25px rgba(74, 67, 92, 0.12);
-      color: #383441;
-    }
+  border: none;
+  border-radius: 999px;
+  padding: 11px 16px;
+  font-family: "Bebas", Tahoma, sans-serif;
+  font-weight: normal;
+  letter-spacing: 0.04em;
+  font-size: 2.15rem;
+  cursor: pointer;
+  background: rgba(255,255,255,0.8);
+  box-shadow: 0 10px 25px rgba(74, 67, 92, 0.12);
+  color: #383441;
+}
+
+.primary-btn {
+  font-size: 1.15rem;
+}
 
     .primary-btn {
   background: linear-gradient(135deg, rgba(255, 111, 0, 0.95), rgba(255, 142, 45, 0.92));
@@ -643,9 +665,12 @@ body {
 }
 
 input,
-select,
+select {
+  font-size: 18px;
+}
+
 button {
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 button,
@@ -732,8 +757,11 @@ button {
 }
 
 h1 {
-  font-size: clamp(1.25rem, 6vw, 1.75rem);
-  line-height: 1.05;
+  font-family: "Bebas", Tahoma, sans-serif;
+  font-size: clamp(1.35rem, 6vw, 1.8rem);
+  letter-spacing: 0.04em;
+  line-height: 1;
+  font-weight: normal;
 }
 
 .subtitle {
@@ -764,11 +792,11 @@ h1 {
 }
 
 .summary-pill strong {
-  font-size: 1.15rem;
+  font-size: 1.45rem;
 }
 
 .summary-pill span {
-  font-size: 0.68rem;
+  font-size: 0.95rem;
 }
 
 .list-view-header {
