@@ -63,6 +63,42 @@
   filter: drop-shadow(0 8px 18px rgba(255, 104, 0, 0.18));
 }
 
+.add-item-card {
+  padding: 12px;
+}
+
+.add-form-toggle {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  box-shadow: 0 12px 30px rgba(54, 54, 60, 0.08);
+  font-size: 1rem;
+  color: #2f2d35;
+}
+
+#addFormIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 111, 0, 0.14);
+  color: #d45700;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.add-form-content {
+  margin-top: 14px;
+}
+
     h1 {
       margin: 0;
       font-size: clamp(1.8rem, 5vw, 3rem);
@@ -746,10 +782,14 @@ h1 {
   <button id="viewAllBtn">View all list</button>
 </div>
 
-      <div class="glass-card">
-        <h2>Add / Update Item</h2>
+      <div class="glass-card add-item-card">
+  <button id="toggleAddFormBtn" class="add-form-toggle" type="button">
+    <span id="addFormIcon">＋</span>
+    <span>Add / Update Item</span>
+  </button>
 
-        <div class="form-grid">
+  <div id="addFormContent" class="add-form-content hidden">
+    <div class="form-grid">
           <div>
             <label>Item name</label>
             <input id="itemName" placeholder="e.g. Salbutamol nebule" />
@@ -847,6 +887,7 @@ h1 {
   </div>
 </div>
       </div>
+	  </div>
 
       <div class="section-tabs" id="sectionTabs"></div>
 
@@ -945,6 +986,9 @@ h1 {
 	let editingId = null;
 
 	const LAST_SECTION_KEY = "expiryTrackerLastSection";
+	
+	const FORM_EXPANDED_KEY = "expiryTrackerFormExpanded";
+	let isFormExpanded = localStorage.getItem(FORM_EXPANDED_KEY) === "true";
 
     const loginBox = document.getElementById("loginBox");
     const trackerBox = document.getElementById("trackerBox");
@@ -964,6 +1008,10 @@ h1 {
 
     const saveBtn = document.getElementById("saveBtn");
     const clearBtn = document.getElementById("clearBtn");
+	
+	const toggleAddFormBtn = document.getElementById("toggleAddFormBtn");
+	const addFormContent = document.getElementById("addFormContent");
+	const addFormIcon = document.getElementById("addFormIcon");
 	
 	const scanBtn = document.getElementById("scanBtn");
 	const scannerBox = document.getElementById("scannerBox");
@@ -1246,7 +1294,8 @@ ${item.notes ? `Notes: ${escapeHtml(item.notes)}<br>` : ""}
       notesInput.value = item.notes || "";
 
       saveBtn.textContent = "Update item";
-      window.scrollTo({ top: 0, behavior: "smooth" });
+	openAddForm();
+	window.scrollTo({ top: 0, behavior: "smooth" });
     });
   });
 
@@ -1336,7 +1385,9 @@ function renderFullList() {
           Barcode: ${escapeHtml(item.barcode || "Not added")}<br>
           Expiry: ${escapeHtml(item.expiryText || formatDate(item.expiryDate))}<br>
           Quantity: ${item.quantity || 1}<br>
-          ${item.notes ? `Notes: ${escapeHtml(item.notes)}<br>` : ""}
+Added by: ${escapeHtml(item.addedBy || "Not recorded")}<br>
+${item.lastScannedBy ? `Last scanned by: ${escapeHtml(item.lastScannedBy)}<br>` : ""}
+${item.notes ? `Notes: ${escapeHtml(item.notes)}<br>` : ""}
         </div>
       </div>
 
@@ -1393,6 +1444,23 @@ function closeListView() {
 
   formHint.textContent = "";
   formHint.classList.add("hidden");
+}
+
+	function renderAddFormState() {
+  addFormContent.classList.toggle("hidden", !isFormExpanded);
+  addFormIcon.textContent = isFormExpanded ? "−" : "＋";
+}
+
+function toggleAddForm() {
+  isFormExpanded = !isFormExpanded;
+  localStorage.setItem(FORM_EXPANDED_KEY, String(isFormExpanded));
+  renderAddFormState();
+}
+
+function openAddForm() {
+  isFormExpanded = true;
+  localStorage.setItem(FORM_EXPANDED_KEY, "true");
+  renderAddFormState();
 }
 	
 	function showFormHint(message) {
@@ -1461,6 +1529,7 @@ async function autofillFromBarcode(barcodeValue) {
     scannerStatus.textContent = "New barcode detected. Please add item details and expiry.";
 
     await stopScanner();
+	openAddForm();
 
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
@@ -1519,7 +1588,7 @@ async function autofillFromBarcode(barcodeValue) {
 
     showFormHint("Same item and same expiry. Choose the new location, then press Save item.");
   }
-
+	openAddForm();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -1838,6 +1907,7 @@ getRedirectResult(auth).catch(error => {
 	saveBtn.addEventListener("click", saveItem);
 	clearBtn.addEventListener("click", clearForm);
 	sectionSelect.addEventListener("change", rememberSelectedSection);
+	toggleAddFormBtn.addEventListener("click", toggleAddForm);
 	
 	scannerInitialsInput.addEventListener("input", () => {
   scannerInitialsInput.value = scannerInitialsInput.value
@@ -1920,6 +1990,7 @@ okBox.addEventListener("click", () => {
 
     setupSections();
 	sectionSelect.value = getSavedSection();
+	renderAddFormState();
   </script>
 </body>
 </html>
