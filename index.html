@@ -16,8 +16,10 @@
       min-height: 100vh;
       font-family: Tahoma, sans-serif;
       background:
-        radial-gradient(circle at top left, rgba(255,255,255,0.9), transparent 32%),
-        linear-gradient(135deg, #efedf5, #f9f7fb);
+  radial-gradient(circle at top left, rgba(255, 111, 0, 0.18), transparent 30%),
+  radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.95), transparent 28%),
+  radial-gradient(circle at bottom right, rgba(120, 120, 128, 0.16), transparent 35%),
+  linear-gradient(135deg, #f4f4f4, #ffffff 45%, #ececef);
       color: #2f2d35;
       padding: 18px;
     }
@@ -35,6 +37,31 @@
       margin-bottom: 18px;
       flex-wrap: wrap;
     }
+	
+	.glass-header {
+  padding: 16px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  box-shadow: 0 18px 45px rgba(54, 54, 60, 0.12);
+  backdrop-filter: blur(24px) saturate(1.25);
+  -webkit-backdrop-filter: blur(24px) saturate(1.25);
+}
+
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.clinic-logo {
+  width: min(260px, 48vw);
+  height: auto;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 18px rgba(255, 104, 0, 0.18));
+}
 
     h1 {
       margin: 0;
@@ -53,8 +80,9 @@
 }
 
 .summary-box.active-filter {
-  background: rgba(215, 220, 255, 0.95);
-  box-shadow: 0 18px 40px rgba(74, 67, 92, 0.18);
+  background: rgba(255, 111, 0, 0.14);
+  border-color: rgba(255, 111, 0, 0.28);
+  box-shadow: 0 18px 40px rgba(255, 111, 0, 0.16);
 }
 
     .subtitle {
@@ -157,8 +185,10 @@
     }
 
     .primary-btn {
-      background: rgba(255, 246, 175, 0.95);
-    }
+  background: linear-gradient(135deg, rgba(255, 111, 0, 0.95), rgba(255, 142, 45, 0.92));
+  color: white;
+  box-shadow: 0 12px 28px rgba(255, 111, 0, 0.22);
+}
 
     .danger-btn {
       background: rgba(255, 215, 215, 0.9);
@@ -337,9 +367,11 @@
     }
 
     .section-tab.active {
-      background: rgba(215, 220, 255, 0.9);
-      font-weight: 700;
-    }
+  background: rgba(255, 111, 0, 0.16);
+  border-color: rgba(255, 111, 0, 0.28);
+  color: #d45700;
+  font-weight: 700;
+}
 
     .items {
       display: grid;
@@ -480,6 +512,25 @@ button {
     padding-right: max(14px, env(safe-area-inset-right));
     padding-bottom: max(14px, env(safe-area-inset-bottom));
   }
+  
+  .brand-wrap {
+  width: 100%;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.clinic-logo {
+  width: min(240px, 78vw);
+}
+
+.glass-header {
+  border-radius: 26px;
+}
+
+h1 {
+  font-size: clamp(1.7rem, 8vw, 2.4rem);
+}
 
   .topbar {
     align-items: flex-start;
@@ -557,14 +608,18 @@ button {
 
 <body>
   <div class="app">
-    <div class="topbar">
-      <div>
-        <h1>Expiry Tracker</h1>
-        <p class="subtitle">Clinic supplies, vaccines, emergency stock, and expiry alerts.</p>
-      </div>
+    <div class="topbar glass-header">
+  <div class="brand-wrap">
+    <img src="onehealth-logo.png" alt="OneHealth logo" class="clinic-logo" />
 
-      <button id="signOutBtn" class="hidden">Sign out</button>
+    <div>
+      <h1>Expiry Tracker</h1>
+      <p class="subtitle">Clinic supplies, vaccines, emergency stock, and expiry alerts.</p>
     </div>
+  </div>
+
+  <button id="signOutBtn" class="hidden">Sign out</button>
+</div>
 
     <div id="loginBox" class="glass-card">
       <h2>Login required</h2>
