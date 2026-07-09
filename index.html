@@ -1154,10 +1154,13 @@ h1 {
     import {
   getAuth,
   GoogleAuthProvider,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  browserLocalPersistence,
+  setPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js";
 
     import {
@@ -1189,6 +1192,10 @@ h1 {
     const db = getFirestore(app);
 
     const provider = new GoogleAuthProvider();
+
+provider.setCustomParameters({
+  prompt: "select_account"
+});
 
     const authorisedEmails = [
   "websitexproject@gmail.com",
@@ -2388,31 +2395,90 @@ if (manualInitials) {
   clearForm();
 }
 
-    function loadItems() {
-      const q = query(collection(db, "expiryItems"), orderBy("expiryDate", "asc"));
+    let unsubscribeItems = null;
 
-      onSnapshot(q, snapshot => {
-        stockItems = snapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        }));
+function loadItems() {
+  if (unsubscribeItems) {
+    unsubscribeItems();
+  }
 
-        render();
-      });
-    }
+  const q = query(collection(db, "expiryItems"), orderBy("expiryDate", "asc"));
+
+  unsubscribeItems = onSnapshot(q, snapshot => {
+    stockItems = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    }));
+
+    render();
+  });
+}
 
     loginBtn.addEventListener("click", async () => {
-  await signInWithRedirect(auth, provider);
+  loginBtn.disabled = true;
+  loginBtn.textContent = "Logging in...";
+
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+
+    // Popup is usually cleaner after logout/login on GitHub Pages.
+    await signInWithPopup(auth, provider);
+  } catch (error) {
+    console.error("Popup login failed, trying redirect:", error);
+
+    // If popup is blocked, fall back to redirect.
+    if (
+      error.code === "auth/popup-blocked" ||
+      error.code === "auth/popup-closed-by-user" ||
+      error.code === "auth/cancelled-popup-request"
+    ) {
+      try {
+        await signInWithRedirect(auth, provider);
+        return;
+      } catch (redirectError) {
+        console.error("Redirect login error:", redirectError);
+        alert(redirectError.message);
+      }
+    } else {
+      alert(error.message);
+    }
+  } finally {
+    loginBtn.disabled = false;
+    loginBtn.textContent = "Login with Google";
+  }
 });
 
-getRedirectResult(auth).catch(error => {
-  console.error("Redirect login error:", error);
-  alert(error.message);
-});
+getRedirectResult(auth)
+  .then(result => {
+    if (result?.user) {
+      console.log("Redirect login successful:", result.user.email);
+    }
+  })
+  .catch(error => {
+    console.error("Redirect login error:", error);
+    alert(error.message);
+  });
 
     signOutBtn.addEventListener("click", async () => {
-      await signOut(auth);
-    });
+  try {
+    await stopScanner();
+
+    if (unsubscribeItems) {
+      unsubscribeItems();
+      unsubscribeItems = null;
+    }
+
+    await signOut(auth);
+
+    stockItems = [];
+    loginBox.classList.remove("hidden");
+    trackerBox.classList.add("hidden");
+    signOutBtn.classList.add("hidden");
+  } catch (error) {
+    console.error("Sign out error:", error);
+    alert(error.message);
+  }
+});
 
     quickScanBtn.addEventListener("click", async () => {
   const initials = await askScannerInitials();
