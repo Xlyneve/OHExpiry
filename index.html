@@ -887,13 +887,12 @@ async function autofillFromBarcode(barcodeValue) {
     itemNameInput.value = "";
     quantityInput.value = 1;
     notesInput.value = "";
-
     sectionSelect.value = getSavedSection();
 
     showFormHint("New barcode detected. Add item name and expiry, then press Save item.");
     scannerStatus.textContent = "New barcode detected. Please add item details and expiry.";
 
-    stopScanner();
+    await stopScanner();
 
     window.scrollTo({ top: 0, behavior: "smooth" });
     return;
@@ -913,27 +912,19 @@ async function autofillFromBarcode(barcodeValue) {
       updatedAt: serverTimestamp()
     });
 
-    if (sameExpiry) {
-  const newQuantity = Number(existingItem.quantity || 1) + 1;
+    await stopScanner();
 
-  await updateDoc(doc(db, "expiryItems", existingItem.id), {
-    quantity: newQuantity,
-    updatedAt: serverTimestamp()
-  });
+    clearForm();
 
-  clearForm();
+    showFormHint(`${existingItem.itemName} quantity updated to ${newQuantity}. Ready for next scan.`);
+    scannerStatus.textContent = `${existingItem.itemName} quantity updated. Ready for next scan.`;
 
-  showFormHint(`${existingItem.itemName} quantity updated to ${newQuantity}. Ready for next scan.`);
-  scannerStatus.textContent = `${existingItem.itemName} quantity updated. Ready for next scan.`;
+    setTimeout(() => {
+      startScanner();
+    }, 600);
 
-  stopScanner();
-
-  setTimeout(() => {
-    startScanner();
-  }, 600);
-
-  return;
-}
+    return;
+  }
 
   barcodeInput.value = barcodeValue;
   itemNameInput.value = existingItem.itemName || "";
@@ -943,13 +934,12 @@ async function autofillFromBarcode(barcodeValue) {
   expiryDateInput.value = "";
   quantityInput.value = 1;
   notesInput.value = existingItem.notes || "";
-
   editingId = null;
 
   showFormHint("Same barcode, new expiry. Enter the new expiry, then press Save item.");
   scannerStatus.textContent = "Same barcode, new expiry. Please enter the current expiry.";
 
-  stopScanner();
+  await stopScanner();
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -1158,9 +1148,8 @@ async function stopScanner() {
     });
 
     clearForm();
-    showFormHint("Same item and same expiry found. Quantity updated.");
-alert("Same item and same expiry found. Quantity updated.");
-    return;
+showFormHint("Same item and same expiry found. Quantity updated.");
+return;
   }
 
   const data = {
