@@ -414,7 +414,14 @@
 
           <div>
 		<label>Expiry date</label>
-		<input id="expiryDate" type="text" placeholder="e.g. 09/2027 or 2030/10" />
+		<input
+  id="expiryDate"
+  type="text"
+  inputmode="numeric"
+  pattern="[0-9/\-]*"
+  autocomplete="off"
+  placeholder="e.g. 09/2027 or 29/09/2027"
+/>
 		</div>
 
           <div>
@@ -438,6 +445,8 @@
   <button id="saveBtn" class="primary-btn">Save item</button>
   <button id="clearBtn">Clear form</button>
 </div>
+
+<p id="formHint" class="scanner-status hidden"></p>
 
 <div id="scannerBox" class="scanner-modal hidden">
   <div class="scanner-modal-header">
@@ -525,10 +534,12 @@
       "Emergency box"
     ];
 
-    let stockItems = [];
+	let stockItems = [];
 	let activeSection = "All sections";
 	let activeStatusFilter = "all";
 	let editingId = null;
+
+	const LAST_SECTION_KEY = "expiryTrackerLastSection";
 
     const loginBox = document.getElementById("loginBox");
     const trackerBox = document.getElementById("trackerBox");
@@ -555,6 +566,7 @@
 	const html5Reader = document.getElementById("html5Reader");
 	const stopScanBtn = document.getElementById("stopScanBtn");
 	const scannerStatus = document.getElementById("scannerStatus");
+	const formHint = document.getElementById("formHint");
 
 	let scannerStream = null;
 	let barcodeDetector = null;
@@ -600,6 +612,22 @@
         sectionTabs.appendChild(tab);
       });
     }
+	
+	function getSavedSection() {
+  const savedSection = localStorage.getItem(LAST_SECTION_KEY);
+
+  if (savedSection && sections.includes(savedSection)) {
+    return savedSection;
+  }
+
+  return "Triage room";
+}
+
+function rememberSelectedSection() {
+  if (sectionSelect.value) {
+    localStorage.setItem(LAST_SECTION_KEY, sectionSelect.value);
+  }
+}
 	
 	function normaliseExpiryDate(value) {
   if (!value) return "";
@@ -828,17 +856,25 @@ document.querySelectorAll("[data-dispose]").forEach(button => {
 }
 
     function clearForm() {
-      editingId = null;
-      itemNameInput.value = "";
-      barcodeInput.value = "";
-      expiryDateInput.value = "";
-      sectionSelect.value = "Triage room";
-      quantityInput.value = 1;
-      notesInput.value = "";
-      saveBtn.textContent = "Save item";
-    }
+  editingId = null;
+  itemNameInput.value = "";
+  barcodeInput.value = "";
+  expiryDateInput.value = "";
+  sectionSelect.value = getSavedSection();
+  quantityInput.value = 1;
+  notesInput.value = "";
+  saveBtn.textContent = "Save item";
+
+  formHint.textContent = "";
+  formHint.classList.add("hidden");
+}
 	
-	function autofillFromBarcode(barcodeValue) {
+	function showFormHint(message) {
+  formHint.textContent = message;
+  formHint.classList.remove("hidden");
+}
+
+function autofillFromBarcode(barcodeValue) {
   const matchingItems = stockItems
     .filter(item => item.barcode === barcodeValue)
     .sort((a, b) => new Date(b.expiryDate) - new Date(a.expiryDate));
@@ -846,13 +882,15 @@ document.querySelectorAll("[data-dispose]").forEach(button => {
   const existingItem = matchingItems[0];
 
   if (!existingItem) {
+    showFormHint("New barcode detected. Please add item name, expiry, section, and quantity.");
     scannerStatus.textContent = "New barcode detected. Please add item details and expiry.";
-    scannerStatus.classList.remove("hidden");
     return;
   }
 
   itemNameInput.value = existingItem.itemName || "";
-  sectionSelect.value = existingItem.section || "Triage room";
+  sectionSelect.value = existingItem.section || getSavedSection();
+  localStorage.setItem(LAST_SECTION_KEY, sectionSelect.value);
+
   quantityInput.value = 1;
   notesInput.value = existingItem.notes || "";
 
@@ -866,14 +904,16 @@ document.querySelectorAll("[data-dispose]").forEach(button => {
     expiryDateInput.value = existingItem.expiryText || existingItem.expiryDate || "";
     editingId = null;
 
+    showFormHint("Same expiry selected. Press Save item and it will add quantity to the existing batch.");
     scannerStatus.textContent = "Same expiry selected. Saving will add quantity to the existing batch.";
-    scannerStatus.classList.remove("hidden");
     return;
   }
 
   expiryDateInput.value = "";
+  editingId = null;
+
+  showFormHint("Same barcode, new expiry. Please enter the new expiry, then press Save item.");
   scannerStatus.textContent = "Same barcode, new expiry. Please enter the current expiry.";
-  scannerStatus.classList.remove("hidden");
 }
 
 async function startScanner() {
@@ -1035,6 +1075,7 @@ async function stopScanner() {
   const expiryText = expiryDateInput.value.trim();
   const expiryDate = normaliseExpiryDate(expiryText);
   const section = sectionSelect.value;
+  rememberSelectedSection();
   const quantity = Number(quantityInput.value || 1);
   const notes = notesInput.value.trim();
 
@@ -1048,12 +1089,23 @@ async function stopScanner() {
     return;
   }
 
-  const matchingSameBatch = stockItems.find(item =>
+  const matchingSameBatch = stockItems.find(item => {
+  const sameBarcodeBatch =
+    barcode &&
     item.barcode === barcode &&
     item.expiryDate === expiryDate &&
     item.section === section &&
-    item.id !== editingId
-  );
+    item.id !== editingId;
+
+  const sameNameBatch =
+    !barcode &&
+    item.itemName.toLowerCase() === itemName.toLowerCase() &&
+    item.expiryDate === expiryDate &&
+    item.section === section &&
+    item.id !== editingId;
+
+  return sameBarcodeBatch || sameNameBatch;
+});
 
   // If same barcode + same expiry + same section exists, add quantity instead of duplicating.
   if (matchingSameBatch && !editingId) {
@@ -1071,7 +1123,8 @@ async function stopScanner() {
     });
 
     clearForm();
-    alert("Same item and same expiry found. Quantity updated.");
+    showFormHint("Same item and same expiry found. Quantity updated.");
+alert("Same item and same expiry found. Quantity updated.");
     return;
   }
 
@@ -1129,6 +1182,7 @@ getRedirectResult(auth).catch(error => {
 
 	saveBtn.addEventListener("click", saveItem);
 	clearBtn.addEventListener("click", clearForm);
+	sectionSelect.addEventListener("change", rememberSelectedSection);
 	
 	barcodeInput.addEventListener("change", () => {
   const barcodeValue = barcodeInput.value.trim();
@@ -1179,6 +1233,7 @@ okBox.addEventListener("click", () => {
     });
 
     setupSections();
+	sectionSelect.value = getSavedSection();
   </script>
 </body>
 </html>
