@@ -426,36 +426,109 @@
     }
 
     .item-card {
-      background: rgba(255,255,255,0.7);
-      border: 1px solid rgba(255,255,255,0.8);
-      border-radius: 24px;
-      padding: 15px;
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10px;
-      align-items: start;
-    }
+  position: relative;
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(255,255,255,0.78);
+  border-radius: 20px;
+  padding: 13px 13px 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: start;
+  box-shadow: 0 10px 28px rgba(54, 54, 60, 0.08);
+}
 
-    .item-name {
-      font-weight: 800;
-      font-size: 1.05rem;
-      margin-bottom: 5px;
-    }
+.item-name {
+  font-weight: 800;
+  font-size: 0.98rem;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
+}
 
-    .item-meta {
-      color: #6d6875;
-      font-size: 0.88rem;
-      line-height: 1.5;
-    }
+.item-meta {
+  color: #6d6875;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.item-meta-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 7px;
+  margin-bottom: 4px;
+}
+
+.meta-dot::before {
+  content: "·";
+  margin-right: 7px;
+  color: rgba(109, 104, 117, 0.65);
+}
+
+.item-extra {
+  margin-top: 4px;
+  color: #817b88;
+}
 
     .status-pill {
-      display: inline-block;
-      border-radius: 999px;
-      padding: 7px 10px;
-      font-size: 0.78rem;
-      font-weight: 800;
-      white-space: nowrap;
-    }
+  display: inline-block;
+  border-radius: 999px;
+  padding: 5px 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+	.item-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.more-btn {
+  width: 34px;
+  min-height: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 1.2rem;
+  line-height: 1;
+  background: rgba(255,255,255,0.7);
+  box-shadow: 0 8px 18px rgba(54, 54, 60, 0.08);
+}
+
+.card-menu {
+  position: absolute;
+  right: 12px;
+  top: 48px;
+  z-index: 5;
+  min-width: 130px;
+  padding: 7px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: 0 18px 45px rgba(54, 54, 60, 0.18);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.card-menu button {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  box-shadow: none;
+  text-align: left;
+  background: transparent;
+}
+
+.card-menu button:hover {
+  background: rgba(255, 111, 0, 0.1);
+}
+
+.card-menu .danger-text {
+  color: #9b2e2e;
+}
 
     .status-expired {
       background: #ffd7d7;
@@ -701,12 +774,21 @@ h1 {
   }
 
   .item-card {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: 1fr auto;
+  border-radius: 18px;
+  padding: 12px;
+}
 
-  .item-card .button-row {
-    grid-template-columns: 1fr 1fr;
-  }
+.item-extra {
+  font-size: 0.74rem;
+}
+
+.card-menu {
+  right: 10px;
+  top: 46px;
+}
+
+  
 
   .scanner-modal {
     padding: 14px;
@@ -1249,30 +1331,40 @@ function rememberSelectedSection() {
     card.className = "item-card";
 
     card.innerHTML = `
-      <div>
-        <div class="item-name">${escapeHtml(item.itemName)}</div>
-        <div class="item-meta">
-          Section: ${escapeHtml(item.section)}<br>
-          Barcode: ${escapeHtml(item.barcode || "Not added")}<br>
-          Expiry: ${escapeHtml(item.expiryText || formatDate(item.expiryDate))}<br>
-          Quantity: ${item.quantity || 1}<br>
-Added by: ${escapeHtml(item.addedBy || "Not recorded")}<br>
-${item.lastScannedBy ? `Last scanned by: ${escapeHtml(item.lastScannedBy)}<br>` : ""}
-${item.notes ? `Notes: ${escapeHtml(item.notes)}<br>` : ""}
-        </div>
+  <div>
+    <div class="item-name">${escapeHtml(item.itemName)}</div>
+
+    <div class="item-meta">
+      <div class="item-meta-main">
+        <span>${escapeHtml(item.section)}</span>
+        <span class="meta-dot">Exp: ${escapeHtml(item.expiryText || formatDate(item.expiryDate))}</span>
+        <span class="meta-dot">Qty ${item.quantity || 1}</span>
       </div>
 
-      <div>
-        <span class="status-pill ${status.className}">${status.label}</span>
-        <div class="button-row" style="margin-top: 10px;">
-          <button data-edit="${item.id}">Edit</button>
-          ${status.group === "expired"
-  ? `<button class="danger-btn" data-dispose="${item.id}">Disposed</button>`
-  : `<button class="danger-btn" data-delete="${item.id}">Delete</button>`
-}
-        </div>
+      <div class="item-extra">
+        Barcode: ${escapeHtml(item.barcode || "Not added")}<br>
+        Added by: ${escapeHtml(item.addedBy || "Not recorded")}
+        ${item.lastScannedBy ? `<br>Last scanned by: ${escapeHtml(item.lastScannedBy)}` : ""}
+        ${item.notes ? `<br>Notes: ${escapeHtml(item.notes)}` : ""}
       </div>
-    `;
+    </div>
+  </div>
+
+  <div class="item-actions">
+    <span class="status-pill ${status.className}">${status.label}</span>
+
+    <button class="more-btn" data-menu="${item.id}" type="button">⋯</button>
+
+    <div class="card-menu hidden" id="menu-${item.id}">
+      <button data-edit="${item.id}">Edit</button>
+      ${
+        status.group === "expired"
+          ? `<button class="danger-text" data-dispose="${item.id}">Mark disposed</button>`
+          : `<button class="danger-text" data-delete="${item.id}">Delete</button>`
+      }
+    </div>
+  </div>
+`;
 
     itemsList.appendChild(card);
   });
@@ -1298,6 +1390,29 @@ ${item.notes ? `Notes: ${escapeHtml(item.notes)}<br>` : ""}
 	window.scrollTo({ top: 0, behavior: "smooth" });
     });
   });
+  
+  document.querySelectorAll("[data-menu]").forEach(button => {
+  button.addEventListener("click", event => {
+    event.stopPropagation();
+
+    const id = button.dataset.menu;
+    const menu = document.getElementById(`menu-${id}`);
+
+    document.querySelectorAll(".card-menu").forEach(openMenu => {
+      if (openMenu !== menu) {
+        openMenu.classList.add("hidden");
+      }
+    });
+
+    menu.classList.toggle("hidden");
+  });
+});
+
+document.addEventListener("click", () => {
+  document.querySelectorAll(".card-menu").forEach(menu => {
+    menu.classList.add("hidden");
+  });
+});
 
   document.querySelectorAll("[data-delete]").forEach(button => {
   button.addEventListener("click", async () => {
@@ -1378,23 +1493,29 @@ function renderFullList() {
     card.className = "item-card";
 
     card.innerHTML = `
-      <div>
-        <div class="item-name">${escapeHtml(item.itemName)}</div>
-        <div class="item-meta">
-          Section: ${escapeHtml(item.section)}<br>
-          Barcode: ${escapeHtml(item.barcode || "Not added")}<br>
-          Expiry: ${escapeHtml(item.expiryText || formatDate(item.expiryDate))}<br>
-          Quantity: ${item.quantity || 1}<br>
-Added by: ${escapeHtml(item.addedBy || "Not recorded")}<br>
-${item.lastScannedBy ? `Last scanned by: ${escapeHtml(item.lastScannedBy)}<br>` : ""}
-${item.notes ? `Notes: ${escapeHtml(item.notes)}<br>` : ""}
-        </div>
+  <div>
+    <div class="item-name">${escapeHtml(item.itemName)}</div>
+
+    <div class="item-meta">
+      <div class="item-meta-main">
+        <span>${escapeHtml(item.section)}</span>
+        <span class="meta-dot">Exp: ${escapeHtml(item.expiryText || formatDate(item.expiryDate))}</span>
+        <span class="meta-dot">Qty ${item.quantity || 1}</span>
       </div>
 
-      <div>
-        <span class="status-pill ${status.className}">${status.label}</span>
+      <div class="item-extra">
+        Barcode: ${escapeHtml(item.barcode || "Not added")}<br>
+        Added by: ${escapeHtml(item.addedBy || "Not recorded")}
+        ${item.lastScannedBy ? `<br>Last scanned by: ${escapeHtml(item.lastScannedBy)}` : ""}
+        ${item.notes ? `<br>Notes: ${escapeHtml(item.notes)}` : ""}
       </div>
-    `;
+    </div>
+  </div>
+
+  <div class="item-actions">
+    <span class="status-pill ${status.className}">${status.label}</span>
+  </div>
+`;
 
     allListItems.appendChild(card);
   });
