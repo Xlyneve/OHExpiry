@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
   <title>Expiry Tracker</title>
 
@@ -403,24 +403,155 @@
     .hidden {
       display: none;
     }
+	
+	/* iPhone / mobile comfort */
+html {
+  -webkit-text-size-adjust: 100%;
+}
 
-    @media (max-width: 760px) {
-      body {
-        padding: 14px;
-      }
+body {
+  padding-left: max(18px, env(safe-area-inset-left));
+  padding-right: max(18px, env(safe-area-inset-right));
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
 
-      .summary-grid {
-        grid-template-columns: 1fr;
-      }
+input,
+select,
+button {
+  font-size: 16px;
+}
 
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
+button,
+.section-tab,
+.summary-box {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
 
-      .item-card {
-        grid-template-columns: 1fr;
-      }
-    }
+button {
+  min-height: 46px;
+}
+
+.scanner-modal {
+  padding-top: max(18px, env(safe-area-inset-top));
+  padding-left: max(18px, env(safe-area-inset-left));
+  padding-right: max(18px, env(safe-area-inset-right));
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+.scanner-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.scanner-modal-body {
+  min-height: 0;
+}
+
+#scannerVideo,
+#html5Reader {
+  min-height: 55vh;
+  max-height: 72vh;
+}
+
+#html5Reader video {
+  width: 100% !important;
+  height: 55vh !important;
+  object-fit: cover !important;
+}
+
+.batch-choice-overlay {
+  padding-top: max(18px, env(safe-area-inset-top));
+  padding-left: max(18px, env(safe-area-inset-left));
+  padding-right: max(18px, env(safe-area-inset-right));
+  padding-bottom: max(18px, env(safe-area-inset-bottom));
+}
+
+.batch-choice-buttons button {
+  min-height: 52px;
+  font-size: 16px;
+}
+
+   @media (max-width: 760px) {
+  body {
+    padding-top: max(14px, env(safe-area-inset-top));
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .topbar {
+    align-items: flex-start;
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .glass-card {
+    border-radius: 24px;
+    padding: 15px;
+  }
+
+  .button-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .button-row button {
+    width: 100%;
+  }
+
+  .section-tabs {
+    padding-bottom: 12px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .section-tab {
+    scroll-snap-align: start;
+    min-height: 42px;
+  }
+
+  .item-card {
+    grid-template-columns: 1fr;
+  }
+
+  .item-card .button-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .scanner-modal {
+    padding: 14px;
+    padding-top: max(14px, env(safe-area-inset-top));
+    padding-bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .scanner-modal-header h2 {
+    font-size: 1.15rem;
+  }
+
+  #scannerVideo,
+  #html5Reader {
+    min-height: 62vh;
+    max-height: 72vh;
+    border-radius: 26px;
+  }
+
+  #html5Reader video {
+    height: 62vh !important;
+  }
+
+  .batch-choice-card {
+    border-radius: 26px;
+    padding: 17px;
+  }
+}
   </style>
 </head>
 
@@ -504,8 +635,8 @@
         </div>
 
         <div class="button-row">
-  <button id="scanBtn">Scan barcode</button>
-  <button id="saveBtn" class="primary-btn">Save item</button>
+  <button id="scanBtn" class="primary-btn">Scan barcode</button>
+  <button id="saveBtn">Save item</button>
   <button id="clearBtn">Clear form</button>
 </div>
 
@@ -533,7 +664,7 @@
 
     <div class="batch-choice-buttons">
       <button id="sameBatchBtn" class="primary-btn">Same location + same expiry</button>
-      <button id="newExpiryBtn">Same item, new expiry</button>
+      <button id="newExpiryBtn">Same location, new expiry</button>
       <button id="differentLocationBtn">Same expiry, different location</button>
       <button id="cancelBatchChoiceBtn" class="danger-btn">Cancel</button>
     </div>
@@ -1086,11 +1217,14 @@ async function startScanner() {
   scannerBox.classList.remove("hidden");
   scannerStatus.textContent = "Starting camera...";
 
-  // iPhone/Safari fallback
-  if (!("BarcodeDetector" in window)) {
-    startHtml5Scanner();
-    return;
-  }
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+// iPhone/iPad works better with html5-qrcode fallback
+if (isIOS || !("BarcodeDetector" in window)) {
+  startHtml5Scanner();
+  return;
+}
 
   try {
     scannerVideo.classList.remove("hidden");
