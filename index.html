@@ -244,6 +244,69 @@
   font-size: 0.9rem;
 }
 
+.batch-choice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(30, 28, 36, 0.45);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.batch-choice-card {
+  width: min(460px, 100%);
+  border-radius: 30px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 70px rgba(40, 35, 55, 0.24);
+  color: #2f2d35;
+}
+
+.batch-choice-card h3 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+}
+
+.batch-choice-card p {
+  margin: 0 0 14px;
+  color: #6d6875;
+  line-height: 1.5;
+}
+
+.batch-choice-details {
+  border-radius: 20px;
+  padding: 13px;
+  background: rgba(255, 255, 255, 0.65);
+  margin-bottom: 14px;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.batch-choice-buttons {
+  display: grid;
+  gap: 9px;
+}
+
+.batch-choice-buttons button {
+  width: 100%;
+  text-align: left;
+  border-radius: 18px;
+  padding: 13px 14px;
+}
+
+.batch-choice-buttons .primary-btn {
+  text-align: center;
+}
+
+.batch-choice-buttons .danger-btn {
+  text-align: center;
+}
+
 #html5Reader {
   width: 100%;
   border-radius: 20px;
@@ -460,6 +523,22 @@
     <p id="scannerStatus" class="scanner-status">Point camera at barcode.</p>
   </div>
 </div>
+
+	<div id="batchChoiceOverlay" class="batch-choice-overlay hidden">
+  <div class="batch-choice-card">
+    <h3>Existing barcode found</h3>
+    <p>Choose what matches this stock item.</p>
+
+    <div id="batchChoiceDetails" class="batch-choice-details"></div>
+
+    <div class="batch-choice-buttons">
+      <button id="sameBatchBtn" class="primary-btn">Same location + same expiry</button>
+      <button id="newExpiryBtn">Same item, new expiry</button>
+      <button id="differentLocationBtn">Same expiry, different location</button>
+      <button id="cancelBatchChoiceBtn" class="danger-btn">Cancel</button>
+    </div>
+  </div>
+</div>
       </div>
 
       <div class="section-tabs" id="sectionTabs"></div>
@@ -567,6 +646,13 @@
 	const stopScanBtn = document.getElementById("stopScanBtn");
 	const scannerStatus = document.getElementById("scannerStatus");
 	const formHint = document.getElementById("formHint");
+	
+	const batchChoiceOverlay = document.getElementById("batchChoiceOverlay");
+	const batchChoiceDetails = document.getElementById("batchChoiceDetails");
+	const sameBatchBtn = document.getElementById("sameBatchBtn");
+	const newExpiryBtn = document.getElementById("newExpiryBtn");
+	const differentLocationBtn = document.getElementById("differentLocationBtn");
+	const cancelBatchChoiceBtn = document.getElementById("cancelBatchChoiceBtn");
 
 	let scannerStream = null;
 	let barcodeDetector = null;
@@ -874,6 +960,48 @@ document.querySelectorAll("[data-dispose]").forEach(button => {
   formHint.classList.remove("hidden");
 }
 
+function askBatchChoice(existingItem, lastExpiry) {
+  return new Promise(resolve => {
+    batchChoiceDetails.innerHTML = `
+      <strong>${escapeHtml(existingItem.itemName || "Unnamed item")}</strong><br>
+      Location: ${escapeHtml(existingItem.section || "Not recorded")}<br>
+      Expiry: ${escapeHtml(lastExpiry)}<br>
+      Current quantity: ${existingItem.quantity || 1}
+    `;
+
+    batchChoiceOverlay.classList.remove("hidden");
+
+    const cleanup = () => {
+      batchChoiceOverlay.classList.add("hidden");
+
+      sameBatchBtn.onclick = null;
+      newExpiryBtn.onclick = null;
+      differentLocationBtn.onclick = null;
+      cancelBatchChoiceBtn.onclick = null;
+    };
+
+    sameBatchBtn.onclick = () => {
+      cleanup();
+      resolve("sameBatch");
+    };
+
+    newExpiryBtn.onclick = () => {
+      cleanup();
+      resolve("newExpiry");
+    };
+
+    differentLocationBtn.onclick = () => {
+      cleanup();
+      resolve("differentLocation");
+    };
+
+    cancelBatchChoiceBtn.onclick = () => {
+      cleanup();
+      resolve("cancel");
+    };
+  });
+}
+
 async function autofillFromBarcode(barcodeValue) {
   const matchingItems = stockItems
     .filter(item => item.barcode === barcodeValue)
@@ -900,19 +1028,23 @@ async function autofillFromBarcode(barcodeValue) {
 
   const lastExpiry = existingItem.expiryText || formatDate(existingItem.expiryDate);
 
-  const sameExpiry = confirm(
-    `Existing item found:\n\n${existingItem.itemName}\nExpiry: ${lastExpiry}\nCurrent quantity: ${existingItem.quantity || 1}\n\nIs this the same expiry?`
-  );
+  await stopScanner();
 
-  if (sameExpiry) {
+  const choice = await askBatchChoice(existingItem, lastExpiry);
+
+  if (choice === "cancel") {
+    clearForm();
+    showFormHint("Scan cancelled. Ready when you are.");
+    return;
+  }
+
+  if (choice === "sameBatch") {
     const newQuantity = Number(existingItem.quantity || 1) + 1;
 
     await updateDoc(doc(db, "expiryItems", existingItem.id), {
       quantity: newQuantity,
       updatedAt: serverTimestamp()
     });
-
-    await stopScanner();
 
     clearForm();
 
@@ -928,18 +1060,24 @@ async function autofillFromBarcode(barcodeValue) {
 
   barcodeInput.value = barcodeValue;
   itemNameInput.value = existingItem.itemName || "";
-  sectionSelect.value = existingItem.section || getSavedSection();
-  localStorage.setItem(LAST_SECTION_KEY, sectionSelect.value);
-
-  expiryDateInput.value = "";
   quantityInput.value = 1;
   notesInput.value = existingItem.notes || "";
   editingId = null;
 
-  showFormHint("Same barcode, new expiry. Enter the new expiry, then press Save item.");
-  scannerStatus.textContent = "Same barcode, new expiry. Please enter the current expiry.";
+  if (choice === "newExpiry") {
+    sectionSelect.value = existingItem.section || getSavedSection();
+    localStorage.setItem(LAST_SECTION_KEY, sectionSelect.value);
+    expiryDateInput.value = "";
 
-  await stopScanner();
+    showFormHint("Same item and same location. Enter the new expiry, then press Save item.");
+  }
+
+  if (choice === "differentLocation") {
+    sectionSelect.value = getSavedSection();
+    expiryDateInput.value = existingItem.expiryText || existingItem.expiryDate || "";
+
+    showFormHint("Same item and same expiry. Choose the new location, then press Save item.");
+  }
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
