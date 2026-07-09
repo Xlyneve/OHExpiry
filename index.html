@@ -1408,11 +1408,6 @@ function rememberSelectedSection() {
   });
 });
 
-document.addEventListener("click", () => {
-  document.querySelectorAll(".card-menu").forEach(menu => {
-    menu.classList.add("hidden");
-  });
-});
 
   document.querySelectorAll("[data-delete]").forEach(button => {
   button.addEventListener("click", async () => {
@@ -2029,6 +2024,12 @@ getRedirectResult(auth).catch(error => {
 	clearBtn.addEventListener("click", clearForm);
 	sectionSelect.addEventListener("change", rememberSelectedSection);
 	toggleAddFormBtn.addEventListener("click", toggleAddForm);
+	
+	document.addEventListener("click", () => {
+  document.querySelectorAll(".card-menu").forEach(menu => {
+    menu.classList.add("hidden");
+  });
+});
 	
 	scannerInitialsInput.addEventListener("input", () => {
   scannerInitialsInput.value = scannerInitialsInput.value
