@@ -1019,6 +1019,16 @@ h1 {
             <label>Notes</label>
             <input id="notes" placeholder="Optional" />
           </div>
+		  <div>
+  <label>Added by initials</label>
+  <input
+    id="manualInitials"
+    maxlength="3"
+    placeholder="e.g. XLY"
+    autocomplete="off"
+    autocapitalize="characters"
+  />
+</div>
         </div>
 
         <div class="button-row">
@@ -1183,7 +1193,8 @@ h1 {
 	let editingId = null;
 
 	const LAST_SECTION_KEY = "expiryTrackerLastSection";
-	
+	const LAST_MANUAL_INITIALS_KEY = "expiryTrackerManualInitials";
+
 	const FORM_EXPANDED_KEY = "expiryTrackerFormExpanded";
 	let isFormExpanded = localStorage.getItem(FORM_EXPANDED_KEY) === "true";
 
@@ -1202,6 +1213,7 @@ h1 {
     const expiryDateInput = document.getElementById("expiryDate");
     const quantityInput = document.getElementById("quantity");
     const notesInput = document.getElementById("notes");
+	const manualInitialsInput = document.getElementById("manualInitials");
 
     const saveBtn = document.getElementById("saveBtn");
     const clearBtn = document.getElementById("clearBtn");
@@ -1688,6 +1700,12 @@ function closeListView() {
   sectionSelect.value = getSavedSection();
   quantityInput.value = 1;
   notesInput.value = "";
+
+  manualInitialsInput.value =
+    localStorage.getItem(LAST_MANUAL_INITIALS_KEY) ||
+    currentScannerInitials ||
+    "";
+
   saveBtn.textContent = "Save item";
 
   formHint.textContent = "";
@@ -2040,6 +2058,12 @@ async function stopScanner() {
 localStorage.setItem(LAST_SECTION_KEY, section);
   const quantity = Number(quantityInput.value || 1);
   const notes = notesInput.value.trim();
+  
+  const manualInitials = manualInitialsInput.value.trim().toUpperCase();
+
+if (manualInitials) {
+  localStorage.setItem(LAST_MANUAL_INITIALS_KEY, manualInitials);
+}
 
   if (!itemName || !expiryText || !section) {
     alert("Please add item name, expiry date, and section.");
@@ -2081,7 +2105,7 @@ localStorage.setItem(LAST_SECTION_KEY, section);
     expiryText,
     section,
     notes,
-    lastScannedBy: currentScannerInitials || matchingSameBatch.lastScannedBy || matchingSameBatch.addedBy || "Manual",
+    lastScannedBy: manualInitials || currentScannerInitials || matchingSameBatch.lastScannedBy || matchingSameBatch.addedBy || "Manual",
     updatedAt: serverTimestamp()
   });
 
@@ -2100,7 +2124,7 @@ localStorage.setItem(LAST_SECTION_KEY, section);
   section,
   quantity,
   notes,
-  addedBy: currentScannerInitials || "Manual",
+  addedBy: manualInitials || currentScannerInitials || "Manual",
   updatedAt: serverTimestamp()
 };
 
@@ -2174,6 +2198,15 @@ getRedirectResult(auth).catch(error => {
     .replace(/[^a-zA-Z]/g, "")
     .toUpperCase()
     .slice(0, 3);
+});
+
+manualInitialsInput.addEventListener("input", () => {
+  manualInitialsInput.value = manualInitialsInput.value
+    .replace(/[^a-zA-Z]/g, "")
+    .toUpperCase()
+    .slice(0, 3);
+
+  localStorage.setItem(LAST_MANUAL_INITIALS_KEY, manualInitialsInput.value);
 });
 	
 	viewAllBtn.addEventListener("click", openListView);
@@ -2249,8 +2282,9 @@ okBox.addEventListener("click", () => {
     });
 
     setupSections();
-	sectionSelect.value = getSavedSection();
-	renderAddFormState();
+sectionSelect.value = getSavedSection();
+manualInitialsInput.value = localStorage.getItem(LAST_MANUAL_INITIALS_KEY) || currentScannerInitials || "";
+renderAddFormState();
   </script>
 </body>
 </html>
