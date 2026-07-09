@@ -2455,19 +2455,34 @@ function loadItems() {
 
 getRedirectResult(auth)
   .then(result => {
-    if (result?.user) {
-      alert("Google returned user: " + result.user.email);
-      console.log("Redirect login successful:", result.user.email);
-    } else {
+    if (!result?.user) {
       console.log("No redirect result found.");
+      return;
     }
+
+    const email = (result.user.email || "").toLowerCase();
+    const allowed = authorisedEmails.map(e => e.toLowerCase());
+
+    console.log("Redirect returned user:", email);
+
+    if (!allowed.includes(email)) {
+      alert(
+        "You logged in as: " + email +
+        "\n\nThis email is not authorised for the tracker yet."
+      );
+      signOut(auth);
+      showLoggedOut();
+      return;
+    }
+
+    showLoggedIn();
   })
   .catch(error => {
     console.error("Redirect login error:", error);
     alert("Redirect login error: " + error.code + " - " + error.message);
   });
-
-    signOutBtn.addEventListener("click", async () => {
+  
+  signOutBtn.addEventListener("click", async () => {
   try {
     await stopScanner();
 
@@ -2479,9 +2494,7 @@ getRedirectResult(auth)
     await signOut(auth);
 
     stockItems = [];
-    loginBox.classList.remove("hidden");
-    trackerBox.classList.add("hidden");
-    signOutBtn.classList.add("hidden");
+    showLoggedOut();
   } catch (error) {
     console.error("Sign out error:", error);
     alert(error.message);
@@ -2576,33 +2589,43 @@ okBox.addEventListener("click", () => {
   render();
 });
 
-    onAuthStateChanged(auth, user => {
-  console.log("Auth state changed:", user ? user.email : "No user");
+    function showLoggedOut() {
+  loginBox.classList.remove("hidden");
+  trackerBox.classList.add("hidden");
+  signOutBtn.classList.add("hidden");
+}
 
-  if (!user) {
-    loginBox.classList.remove("hidden");
-    trackerBox.classList.add("hidden");
-    signOutBtn.classList.add("hidden");
-    return;
-  }
-
-  const email = (user.email || "").toLowerCase();
-
-  if (!authorisedEmails.map(e => e.toLowerCase()).includes(email)) {
-    alert(
-      "You logged in as: " + email +
-      "\n\nThis email is not authorised for the tracker yet."
-    );
-    signOut(auth);
-    return;
-  }
-
+function showLoggedIn() {
   loginBox.classList.add("hidden");
   trackerBox.classList.remove("hidden");
   signOutBtn.classList.remove("hidden");
 
   setupSections();
   loadItems();
+}
+
+onAuthStateChanged(auth, user => {
+  console.log("Auth state changed:", user ? user.email : "No user");
+
+  if (!user) {
+    showLoggedOut();
+    return;
+  }
+
+  const email = (user.email || "").toLowerCase();
+  const allowed = authorisedEmails.map(e => e.toLowerCase());
+
+  if (!allowed.includes(email)) {
+    alert(
+      "You logged in as: " + email +
+      "\n\nThis email is not authorised for the tracker yet."
+    );
+    signOut(auth);
+    showLoggedOut();
+    return;
+  }
+
+  showLoggedIn();
 });
 
     setupSections();
