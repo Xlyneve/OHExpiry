@@ -2456,12 +2456,15 @@ function loadItems() {
 getRedirectResult(auth)
   .then(result => {
     if (result?.user) {
+      alert("Google returned user: " + result.user.email);
       console.log("Redirect login successful:", result.user.email);
+    } else {
+      console.log("No redirect result found.");
     }
   })
   .catch(error => {
     console.error("Redirect login error:", error);
-    alert(error.message);
+    alert("Redirect login error: " + error.code + " - " + error.message);
   });
 
     signOutBtn.addEventListener("click", async () => {
@@ -2574,26 +2577,33 @@ okBox.addEventListener("click", () => {
 });
 
     onAuthStateChanged(auth, user => {
-      if (!user) {
-        loginBox.classList.remove("hidden");
-        trackerBox.classList.add("hidden");
-        signOutBtn.classList.add("hidden");
-        return;
-      }
+  console.log("Auth state changed:", user ? user.email : "No user");
 
-      if (!authorisedEmails.includes(user.email)) {
-        alert("You are not authorised to access this tracker.");
-        signOut(auth);
-        return;
-      }
+  if (!user) {
+    loginBox.classList.remove("hidden");
+    trackerBox.classList.add("hidden");
+    signOutBtn.classList.add("hidden");
+    return;
+  }
 
-      loginBox.classList.add("hidden");
-      trackerBox.classList.remove("hidden");
-      signOutBtn.classList.remove("hidden");
+  const email = (user.email || "").toLowerCase();
 
-      setupSections();
-      loadItems();
-    });
+  if (!authorisedEmails.map(e => e.toLowerCase()).includes(email)) {
+    alert(
+      "You logged in as: " + email +
+      "\n\nThis email is not authorised for the tracker yet."
+    );
+    signOut(auth);
+    return;
+  }
+
+  loginBox.classList.add("hidden");
+  trackerBox.classList.remove("hidden");
+  signOutBtn.classList.remove("hidden");
+
+  setupSections();
+  loadItems();
+});
 
     setupSections();
 sectionSelect.value = getSavedSection();
