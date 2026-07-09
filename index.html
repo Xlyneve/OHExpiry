@@ -417,7 +417,7 @@
 		<input
   id="expiryDate"
   type="text"
-  inputmode="numeric"
+  inputmode="decimal"
   pattern="[0-9/\-]*"
   autocomplete="off"
   placeholder="e.g. 09/2027 or 29/09/2027"
@@ -1183,6 +1183,22 @@ getRedirectResult(auth).catch(error => {
 	saveBtn.addEventListener("click", saveItem);
 	clearBtn.addEventListener("click", clearForm);
 	sectionSelect.addEventListener("change", rememberSelectedSection);
+	
+	expiryDateInput.addEventListener("input", () => {
+  let value = expiryDateInput.value.replace(/[^\d]/g, "");
+
+  // MMYYYY → MM/YYYY
+  if (value.length > 2 && value.length <= 6) {
+    value = value.slice(0, 2) + "/" + value.slice(2);
+  }
+
+  // DDMMYYYY → DD/MM/YYYY
+  if (value.length > 6) {
+    value = value.slice(0, 2) + "/" + value.slice(2, 4) + "/" + value.slice(4, 8);
+  }
+
+  expiryDateInput.value = value;
+});
 	
 	barcodeInput.addEventListener("change", () => {
   const barcodeValue = barcodeInput.value.trim();
