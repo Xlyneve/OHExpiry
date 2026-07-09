@@ -874,7 +874,7 @@ document.querySelectorAll("[data-dispose]").forEach(button => {
   formHint.classList.remove("hidden");
 }
 
-function autofillFromBarcode(barcodeValue) {
+async function autofillFromBarcode(barcodeValue) {
   const matchingItems = stockItems
     .filter(item => item.barcode === barcodeValue)
     .sort((a, b) => new Date(b.expiryDate) - new Date(a.expiryDate));
@@ -882,38 +882,76 @@ function autofillFromBarcode(barcodeValue) {
   const existingItem = matchingItems[0];
 
   if (!existingItem) {
-    showFormHint("New barcode detected. Please add item name, expiry, section, and quantity.");
+    barcodeInput.value = barcodeValue;
+    expiryDateInput.value = "";
+    itemNameInput.value = "";
+    quantityInput.value = 1;
+    notesInput.value = "";
+
+    sectionSelect.value = getSavedSection();
+
+    showFormHint("New barcode detected. Add item name and expiry, then press Save item.");
     scannerStatus.textContent = "New barcode detected. Please add item details and expiry.";
+
+    stopScanner();
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
-
-  itemNameInput.value = existingItem.itemName || "";
-  sectionSelect.value = existingItem.section || getSavedSection();
-  localStorage.setItem(LAST_SECTION_KEY, sectionSelect.value);
-
-  quantityInput.value = 1;
-  notesInput.value = existingItem.notes || "";
 
   const lastExpiry = existingItem.expiryText || formatDate(existingItem.expiryDate);
 
   const sameExpiry = confirm(
-    `Existing item found:\n\n${existingItem.itemName}\nLast expiry recorded: ${lastExpiry}\n\nIs this the same expiry?`
+    `Existing item found:\n\n${existingItem.itemName}\nExpiry: ${lastExpiry}\nCurrent quantity: ${existingItem.quantity || 1}\n\nIs this the same expiry?`
   );
 
   if (sameExpiry) {
-    expiryDateInput.value = existingItem.expiryText || existingItem.expiryDate || "";
-    editingId = null;
+    const newQuantity = Number(existingItem.quantity || 1) + 1;
 
-    showFormHint("Same expiry selected. Press Save item and it will add quantity to the existing batch.");
-    scannerStatus.textContent = "Same expiry selected. Saving will add quantity to the existing batch.";
-    return;
-  }
+    await updateDoc(doc(db, "expiryItems", existingItem.id), {
+      quantity: newQuantity,
+      updatedAt: serverTimestamp()
+    });
+
+    if (sameExpiry) {
+  const newQuantity = Number(existingItem.quantity || 1) + 1;
+
+  await updateDoc(doc(db, "expiryItems", existingItem.id), {
+    quantity: newQuantity,
+    updatedAt: serverTimestamp()
+  });
+
+  clearForm();
+
+  showFormHint(`${existingItem.itemName} quantity updated to ${newQuantity}. Ready for next scan.`);
+  scannerStatus.textContent = `${existingItem.itemName} quantity updated. Ready for next scan.`;
+
+  stopScanner();
+
+  setTimeout(() => {
+    startScanner();
+  }, 600);
+
+  return;
+}
+
+  barcodeInput.value = barcodeValue;
+  itemNameInput.value = existingItem.itemName || "";
+  sectionSelect.value = existingItem.section || getSavedSection();
+  localStorage.setItem(LAST_SECTION_KEY, sectionSelect.value);
 
   expiryDateInput.value = "";
+  quantityInput.value = 1;
+  notesInput.value = existingItem.notes || "";
+
   editingId = null;
 
-  showFormHint("Same barcode, new expiry. Please enter the new expiry, then press Save item.");
+  showFormHint("Same barcode, new expiry. Enter the new expiry, then press Save item.");
   scannerStatus.textContent = "Same barcode, new expiry. Please enter the current expiry.";
+
+  stopScanner();
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function startScanner() {
@@ -992,13 +1030,12 @@ function startHtml5Scanner() {
   html5QrCode.start(
     { facingMode: "environment" },
     config,
-    decodedText => {
-      barcodeInput.value = decodedText;
-      autofillFromBarcode(decodedText);
+    async decodedText => {
+  barcodeInput.value = decodedText;
+  scannerStatus.textContent = `Barcode detected: ${decodedText}`;
 
-      scannerStatus.textContent = `Barcode detected: ${decodedText}`;
-      stopScanner();
-    },
+  await autofillFromBarcode(decodedText);
+},
     errorMessage => {
       // Ignore scan errors while camera is searching.
     }
@@ -1021,11 +1058,9 @@ async function scanLoop() {
   scanning = false;
 
   barcodeInput.value = barcodeValue;
-  autofillFromBarcode(barcodeValue);
+  scannerStatus.textContent = `Barcode detected: ${barcodeValue}`;
 
-  scannerStatus.textContent = `Barcode detected: ${barcodeValue}. Complete item details, then save.`;
-
-  stopScanner();
+  await autofillFromBarcode(barcodeValue);
   return;
 }
   } catch (error) {
